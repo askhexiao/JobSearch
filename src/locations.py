@@ -7,6 +7,9 @@
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 # 省级行政区划代码（GB/T 2260 前两位）——24365 areaCode 参数。
 AREA_CODES = {
     "全国": "", "北京": "11", "天津": "12", "河北": "13", "山西": "14",
@@ -75,7 +78,7 @@ LOCATION_CHOICES = sorted(
 
 # 行政区划后缀（长优先）与伪层级（如直辖市的「市辖区」）。
 _ADMIN_SUFFIXES = sorted(
-    ["特别行政区", "自治区", "自治州", "自治县", "地区", "省", "市", "区", "县", "旗", "盟", "林区"],
+    ["特别行政区", "壮族自治区", "回族自治区", "维吾尔自治区", "自治区", "自治州", "自治县", "地区", "省", "市", "区", "县", "旗", "盟", "林区"],
     key=len, reverse=True,
 )
 _PSEUDO = {"市辖区", "省直辖县级行政区划", "直辖县级行政区划", "自治区直辖县级行政区划"}
@@ -149,3 +152,54 @@ def location_matches(location: str, job_location: str) -> bool:
         return False
     jl = job_location.lower()
     return any(t and t.lower() in jl for t in location_tokens(location))
+
+
+# ---------- 省-市行政区划数据（用于 24365 市级筛选） ----------
+
+_PCA_PATH = Path(__file__).resolve().parent.parent / "web" / "pca.json"
+_PCA_CACHE: list | None = None
+_CITY_CODES_CACHE: dict | None = None
+
+
+def _load_pca() -> list:
+    global _PCA_CACHE
+    if _PCA_CACHE is None:
+        try:
+            _PCA_CACHE = json.loads(_PCA_PATH.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            _PCA_CACHE = []
+    return _PCA_CACHE
+
+
+def city_codes() -> dict:
+    """城市名 -> 6 位行政区划码（24365 市级筛选 areaCode 用）。"""
+    global _CITY_CODES_CACHE
+    if _CITY_CODES_CACHE is None:
+        codes: dict = {}
+        for prov in _load_pca():
+            for city in prov.get("children", []):
+                name = city.get("name", "")
+                code4 = str(city.get("code", ""))
+                if not name or not code4:
+                    continue
+                code6 = code4 + "00"
+                codes[name] = code6
+                if name.endswith("市"):
+                    codes[name[:-1]] = code6
+        _CITY_CODES_CACHE = codes
+    return _CITY_CODES_CACHE
+
+
+def city_area_code(city_name: str) -> str:
+    """城市名 -> 6 位行政区划码；未知返回空串。"""
+    return city_codes().get((city_name or "").strip(), "")
+
+
+def provinces_with_cities() -> list:
+    """返回 [(省份规范化名, [城市全名...])]，用于市级分块抓取。"""
+    out = []
+    for prov in _load_pca():
+        pnorm = _strip_admin_suffix(prov.get("name", ""))
+        cities = [c.get("name", "") for c in prov.get("children", []) if c.get("name")]
+        out.append((pnorm, cities))
+    return out

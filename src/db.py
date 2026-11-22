@@ -135,5 +135,11 @@ class JobStore:
         self.conn.commit()
         return cur.rowcount
 
+    def delete_source(self, source: str) -> int:
+        """删除某数据源的全部岗位，返回删除条数。"""
+        cur = self.conn.execute("DELETE FROM jobs WHERE source = ?", (source,))
+        self.conn.commit()
+        return cur.rowcount
+
     def close(self) -> None:
         self.conn.close()

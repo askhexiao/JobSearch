@@ -18,7 +18,7 @@ import urllib.parse
 from datetime import datetime, timezone
 
 from .base import BaseAdapter
-from ..locations import AREA_CODES
+from ..locations import AREA_CODES, city_area_code, provinces_with_cities
 from ..models import Job
 from ..normalize import normalize_company_nature, normalize_education, normalize_recruit_type
 
@@ -32,17 +32,19 @@ class NCSSAdapter(BaseAdapter):
     name = "24365"
 
     def fetch(self, keyword: str = "", area: str = "北京", max_pages: int = 100) -> list:
-        """抓取职位。
-
-        Args:
-            keyword: 职位关键词，空串表示不限。
-            area: 地区名（见 AREA_CODES），默认北京。
-            max_pages: 最大翻页数（安全上限，每页 20 条）。
-        """
+        """按省级地区抓取（直辖市/省级查询用）。"""
         if area not in AREA_CODES:
             raise ValueError(f"未知地区 '{area}'，可选：{', '.join(AREA_CODES.keys())}")
-        area_code = AREA_CODES[area]
+        return self._fetch(keyword, AREA_CODES[area], max_pages, province=area, city="")
 
+    def fetch_by_city(self, keyword: str = "", city_name: str = "", province: str = "", max_pages: int = 100) -> list:
+        """按市级地区抓取（6 位城市码），并标记城市名。"""
+        code = city_area_code(city_name)
+        if not code:
+            return []
+        return self._fetch(keyword, code, max_pages, province=province, city=city_name)
+
+    def _fetch(self, keyword: str, area_code: str, max_pages: int, province: str = "", city: str = "") -> list:
         jobs: list[Job] = []
         for page in range(1, max_pages + 1):
             url = API_URL + "?" + urllib.parse.urlencode({
@@ -70,7 +72,7 @@ class NCSSAdapter(BaseAdapter):
             if not items:
                 break
             for item in items:
-                job = self._normalize(item)
+                job = self._normalize(item, province, city)
                 if job is not None:
                     jobs.append(job)
             if len(items) < PAGE_SIZE:
@@ -78,23 +80,28 @@ class NCSSAdapter(BaseAdapter):
         return jobs
 
     def fetch_all(self, keyword: str = "", max_pages: int = 100) -> list:
-        """按省级地区分块抓取全部职位（合并去重）。"""
-        provinces = [
-            name for name, code in AREA_CODES.items()
-            if code and name not in {"台湾", "香港", "澳门"}
-        ]
+        """按市级地区分块抓取全部职位（合并去重，直辖市按省级）。"""
+        municipalities = {"北京", "上海", "天津", "重庆"}
         jobs: list[Job] = []
         seen: set = set()
-        for idx, area in enumerate(provinces, 1):
-            batch = self.fetch(keyword=keyword, area=area, max_pages=max_pages)
+        for prov, cities in provinces_with_cities():
+            if prov in {"台湾", "香港", "澳门"}:
+                continue
+            if prov in municipalities:
+                batch = self.fetch(keyword=keyword, area=prov, max_pages=max_pages)
+            else:
+                batch = []
+                for city in cities:
+                    cn = city[:-1] if city.endswith("市") else city
+                    batch.extend(self.fetch_by_city(keyword=keyword, city_name=cn, province=prov, max_pages=max_pages))
             for job in batch:
                 if job.job_id not in seen:
                     seen.add(job.job_id)
                     jobs.append(job)
-            print(f"  [{idx}/{len(provinces)}] {area}: {len(batch)} 条")
+            print(f"  {prov}: {len(batch)} 条")
         return jobs
 
-    def _normalize(self, item: dict) -> Job | None:
+    def _normalize(self, item: dict, province_override: str = "", city_override: str = "") -> Job | None:
         job_id = item.get("jobId")
         if not job_id:
             return None
@@ -125,13 +132,22 @@ class NCSSAdapter(BaseAdapter):
         job_type = "实习" if ("实习" in title or "intern" in title.lower()) else "全职"
         education = item.get("degreeName") or ""
 
+        province = province_override or (item.get("areaCodeName") or "")
+        if city_override:
+            location = city_override
+            location_city = city_override
+        else:
+            location = province
+            location_city = ""
+
         return Job(
             source=self.name,
             job_id=str(job_id),
             title=title,
             company=item.get("recName") or "",
-            location=item.get("areaCodeName") or "",
-            location_province=item.get("areaCodeName") or "",
+            location=location,
+            location_province=province,
+            location_city=location_city,
             salary=salary,
             salary_min=salary_min,
             salary_max=salary_max,
