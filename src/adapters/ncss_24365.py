@@ -77,6 +77,23 @@ class NCSSAdapter(BaseAdapter):
                 break
         return jobs
 
+    def fetch_all(self, keyword: str = "", max_pages: int = 100) -> list:
+        """按省级地区分块抓取全部职位（合并去重）。"""
+        provinces = [
+            name for name, code in AREA_CODES.items()
+            if code and name not in {"台湾", "香港", "澳门"}
+        ]
+        jobs: list[Job] = []
+        seen: set = set()
+        for idx, area in enumerate(provinces, 1):
+            batch = self.fetch(keyword=keyword, area=area, max_pages=max_pages)
+            for job in batch:
+                if job.job_id not in seen:
+                    seen.add(job.job_id)
+                    jobs.append(job)
+            print(f"  [{idx}/{len(provinces)}] {area}: {len(batch)} 条")
+        return jobs
+
     def _normalize(self, item: dict) -> Job | None:
         job_id = item.get("jobId")
         if not job_id:

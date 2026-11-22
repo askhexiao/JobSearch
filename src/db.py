@@ -121,6 +121,11 @@ class JobStore:
         ).fetchall()
         return {row["source"]: row["c"] for row in rows}
 
+    def all_jobs(self) -> list:
+        """读取库内全部职位，返回 list[Job]。"""
+        rows = self.conn.execute("SELECT * FROM jobs").fetchall()
+        return [Job(**{name: row[name] for name in FIELD_NAMES}) for row in rows]
+
     def delete_expired(self) -> int:
         """删除已过截止日期的岗位，返回删除条数。"""
         today = date.today().isoformat()

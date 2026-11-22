@@ -6,7 +6,8 @@
     python run_ncss.py                     # 抓取北京地区职位并入库
     python run_ncss.py 设计                # 抓取"设计"关键词职位
     python run_ncss.py 设计 --area 上海    # 关键词 + 地区
-    python run_ncss.py --area 广东         # 只按地区
+    python run_ncss.py --all               # 全量抓取所有省级地区
+    python run_ncss.py 设计 --all          # 关键词 + 全量
 """
 from __future__ import annotations
 
@@ -27,22 +28,27 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="抓取 24365 职位并入库")
     parser.add_argument("keyword", nargs="?", default="", help="职位关键词，如 '设计'")
     parser.add_argument("--area", "-a", default="北京", help="工作地区（默认 北京）")
+    parser.add_argument("--all", action="store_true", help="全量抓取所有省级地区")
     parser.add_argument("--max-pages", type=int, default=100, help="最大翻页数（每页 20 条）")
     parser.add_argument("--db", default=str(DB_PATH), help="SQLite 数据库路径")
     args = parser.parse_args()
 
-    if args.area not in AREA_CODES:
-        print(f"错误：未知地区 '{args.area}'，可选：{', '.join(AREA_CODES.keys())}")
-        return 1
-
     adapter = NCSSAdapter()
-    print(f"[24365] 抓取中：地区={args.area}，关键词={args.keyword or '（不限）'}")
-    jobs = adapter.fetch(keyword=args.keyword, area=args.area, max_pages=args.max_pages)
+    if args.all:
+        print(f"[24365] 全量抓取：所有省级地区，关键词={args.keyword or '（不限）'}")
+        jobs = adapter.fetch_all(keyword=args.keyword, max_pages=args.max_pages)
+    else:
+        if args.area not in AREA_CODES:
+            print(f"错误：未知地区 '{args.area}'，可选：{', '.join(AREA_CODES.keys())}")
+            return 1
+        print(f"[24365] 抓取中：地区={args.area}，关键词={args.keyword or '（不限）'}")
+        jobs = adapter.fetch(keyword=args.keyword, area=args.area, max_pages=args.max_pages)
     print(f"[24365] 抓取到 {len(jobs)} 条职位")
 
     store = JobStore(args.db)
     new_count = sum(1 for job in jobs if store.upsert(job))
-    print(f"[DB] 新增 {new_count} 条，数据库共 {store.count()} 条")
+    expired = store.delete_expired()
+    print(f"[DB] 新增 {new_count} 条，清理过期 {expired} 条，数据库共 {store.count()} 条")
     print(f"[DB] 各数据源统计：{store.count_by_source()}")
     store.close()
 

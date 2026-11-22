@@ -55,7 +55,8 @@
 git clone https://github.com/<your-username>/unifit100.git
 cd unifit100
 
-# ① 抓取职位并入库（可单独运行）
+# ① 抓取职位并入库（可单独运行，或一键全量）
+python run_scrape.py               # 一键全量抓取：24365(全省)+国聘+外企
 python run_ncss.py                 # 24365 北京地区职位
 python run_ncss.py 设计            # 指定关键词
 python run_ncss.py 设计 --area 上海
@@ -71,12 +72,13 @@ python web_server.py               # 打开 http://127.0.0.1:8000 填表订阅
 ### 工作流
 
 1. 用户在订阅页填写：**邮箱 + 职位名称（≤5）+ 招聘类型 + 工作地点（省-市，≤5，或「不限」）+ 推送频率 + 岗位发布时长**。
-2. 运行推送脚本，抓取匹配岗位 → 与历史推送去重 → **只发新岗位**。
+2. 定时「抓取入库 → 读库匹配 → 去重推送」，**只发新岗位**：
 
 ```bash
-python run_push.py --dry-run       # 先预览：抓取+匹配+去重，但不发信
+python run_scrape.py               # ① 全量抓取入库（24365+国聘+外企）
+python run_push.py --dry-run       # ② 预览推送（读库匹配）
 cp config.example.json config.json # 填 SMTP 凭证
-python run_push.py                 # 真实发送
+python run_push.py                 # ③ 真实发送
 ```
 
 建议用 `cron` / GitHub Actions 定时执行 `run_push.py`。
@@ -129,6 +131,7 @@ unifit100/
 │   ├── logo.png               # 品牌主 Logo
 │   └── logo_app.png           # App 图标
 ├── run_ncss.py                # 入口：抓取 24365
+├── run_scrape.py              # 入口：一键全量抓取三源
 ├── run_greenhouse.py          # 入口：抓取 Greenhouse
 ├── run_iguopin.py             # 入口：抓取国聘网
 ├── run_push.py                # 入口：匹配订阅 + 邮件推送
@@ -162,7 +165,7 @@ unifit100/
 
 ## 📈 当前进度
 
-- [x] 24365 适配器（分页抓取，北京地区 100 条验证通过）
+- [x] 24365 适配器（全国 31 省全量分块抓取，2584 条）
 - [x] Greenhouse 适配器（6 个外企 board，105 条中国大陆岗位）
 - [x] 国聘网适配器（200 条，央企/国企 71.5%，城市级地点 + 校招/社招）
 - [x] 统一数据模型 + 字段标准化（薪资/地点/学历/招聘类型/公司性质）
@@ -171,7 +174,7 @@ unifit100/
 - [x] 前端订阅页（省-市联动 + 校验 + 品牌样式）
 - [x] 邮件推送（阿里云 DirectMail SMTP，纯文本，含 --dry-run）
 - [x] 中国大陆过滤（排除港澳台）
-- [ ] 24365 城市级 / 全量分块抓取
+- [x] 推送读库匹配（三源全量岗位真正用于推送）
 - [ ] HTML 邮件模板（套用品牌 logo 与字体）
 - [ ] 中英职位名词典（打通中外职位匹配）
 - [ ] 各省高校就业网适配器

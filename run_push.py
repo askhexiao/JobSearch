@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""定时推送：抓取 → 匹配订阅 → 去重 → 邮件发送。
+"""定时推送：读库匹配 → 去重 → 邮件发送。
 
 用法:
     python run_push.py             # 真实发送（需 config.json）
     python run_push.py --dry-run   # 只打印要发送的内容，不真正发信
 
-未配置 config.json 时自动进入 dry-run 模式，方便先跑通再填 SMTP 凭证。
+推送前请先运行抓取脚本（python run_scrape.py）把最新岗位入库。
+未配置 config.json 时自动进入 dry-run 模式。
 """
 from __future__ import annotations
 
@@ -17,15 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from src.adapters.greenhouse import GreenhouseAdapter
-from src.adapters.ncss_24365 import NCSSAdapter
-from src.locations import province_of
+from src.db import JobStore
 from src.mailer import Mailer
-from src.subscription import (
-    SubscriptionStore,
-    job_key,
-    matches,
-)
+from src.subscription import SubscriptionStore, job_key, matches
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = ROOT / "unifit100.db"
@@ -43,20 +38,6 @@ def load_config() -> dict | None:
     except (json.JSONDecodeError, OSError) as exc:
         print(f"[警告] 读取 config.json 失败：{exc}")
         return None
-
-
-def fetch_tasks(sub) -> list:
-    """返回某订阅的 24365 抓取任务 [(keyword, province_name), ...]。"""
-    titles = sub.titles or [""]
-    if sub.location_unlimited or not sub.locations:
-        provinces = [""]  # 全国
-    else:
-        provinces = []
-        for loc in sub.locations:
-            p = province_of(loc) or ""
-            if p not in provinces:
-                provinces.append(p)
-    return [(t, p) for t in titles for p in provinces]
 
 
 def render_email(sub, jobs, web_base_url: str) -> str:
@@ -80,7 +61,7 @@ def render_email(sub, jobs, web_base_url: str) -> str:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="按订阅抓取新岗位并邮件推送")
+    parser = argparse.ArgumentParser(description="按订阅匹配库内岗位并邮件推送")
     parser.add_argument("--dry-run", action="store_true", help="只打印，不发送")
     parser.add_argument("--db", default=str(DB_PATH), help="SQLite 数据库路径")
     args = parser.parse_args()
@@ -105,39 +86,18 @@ def main() -> int:
         return 0
     print(f"共 {len(subs)} 个订阅\n")
 
-    ncss = NCSSAdapter()
-    gh = GreenhouseAdapter()
-
-    # Greenhouse：全部中国大陆岗位抓取一次，各订阅本地匹配。
-    gh_pool = gh.fetch(china_only=True)
-    print(f"[greenhouse] 中国大陆岗位 {len(gh_pool)} 条\n")
-
-    # 24365：按 (keyword, province) 缓存抓取结果。
-    ncss_cache: dict = {}
-
-    def ncss_fetch(title: str, province: str) -> list:
-        key = (title, province)
-        if key not in ncss_cache:
-            area = province if province else "全国"
-            ncss_cache[key] = ncss.fetch(keyword=title, area=area)
-        return ncss_cache[key]
+    # 读库：三数据源（24365 + 国聘 + Greenhouse）全量岗位。
+    job_store = JobStore(args.db)
+    job_store.delete_expired()
+    pool = job_store.all_jobs()
+    if not pool:
+        print("职位库为空，请先运行 python run_scrape.py 抓取岗位。")
+        job_store.close()
+        sub_store.close()
+        return 0
+    print(f"职位库共 {len(pool)} 条：{job_store.count_by_source()}\n")
 
     for sub in subs:
-        # 汇总候选岗位（去重）。
-        pool = []
-        seen = set()
-        for title, province in fetch_tasks(sub):
-            for job in ncss_fetch(title, province):
-                k = job_key(job)
-                if k not in seen:
-                    seen.add(k)
-                    pool.append(job)
-        for job in gh_pool:
-            k = job_key(job)
-            if k not in seen:
-                seen.add(k)
-                pool.append(job)
-
         matched = [j for j in pool if matches(sub, j)]
         # 跨源去重：同一「公司 + 职位 + 城市」只保留一条（多渠道转载去重）
         seen_keys = set()
@@ -166,6 +126,7 @@ def main() -> int:
             for j in new_jobs:
                 sub_store.mark_sent(sub.email, job_key(j))
 
+    job_store.close()
     sub_store.close()
     return 0
 
