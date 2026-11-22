@@ -40,12 +40,6 @@ DEFAULT_PUBLISH_WITHIN = "最近1个月"
 
 # 校招判定（优先用标准化 recruit_type，旧数据回退标题启发式）。
 
-
-def is_campus(job: Job) -> bool:
-    if job.recruit_type:
-        return job.recruit_type in ("校招", "实习")
-    return normalize_recruit_type(job.title, job.job_type) in ("校招", "实习")
-
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS subscriptions (
     email              TEXT PRIMARY KEY,
@@ -57,7 +51,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     frequency          TEXT DEFAULT '每周1次',
     publish_within     TEXT DEFAULT '最近1个月',
     created_at         TEXT DEFAULT '',
-    updated_at         TEXT DEFAULT ''
+    updated_at         TEXT DEFAULT '',
+    unsubscribed_at    TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS sent_jobs (
     email   TEXT NOT NULL,
@@ -73,6 +68,7 @@ _NEW_COLUMNS = {
     "employer_db": "TEXT DEFAULT ''",
     "frequency": "TEXT DEFAULT '每周1次'",
     "publish_within": "TEXT DEFAULT '最近1个月'",
+    "unsubscribed_at": "TEXT DEFAULT ''",
 }
 
 
@@ -88,6 +84,7 @@ class Subscription:
     publish_within: str = DEFAULT_PUBLISH_WITHIN         # 岗位发布时长
     created_at: str = ""
     updated_at: str = ""
+    unsubscribed_at: str = ""                             # 退订时间（空=活跃）
 
     def to_row(self) -> dict:
         return {
@@ -233,7 +230,7 @@ class SubscriptionStore:
         else:
             self.conn.execute(
                 "UPDATE subscriptions SET titles=?, locations=?, location_unlimited=?, "
-                "recruit_type=?, employer_db=?, frequency=?, publish_within=?, updated_at=? WHERE email=?",
+                "recruit_type=?, employer_db=?, frequency=?, publish_within=?, updated_at=?, unsubscribed_at='' WHERE email=?",
                 (row["titles"], row["locations"], row["location_unlimited"],
                  row["recruit_type"], row["employer_db"], row["frequency"], row["publish_within"], now, sub.email),
             )
@@ -244,8 +241,20 @@ class SubscriptionStore:
         return self._row_to_sub(row) if row else None
 
     def all(self) -> list:
-        rows = self.conn.execute("SELECT * FROM subscriptions ORDER BY created_at").fetchall()
+        rows = self.conn.execute(
+            "SELECT * FROM subscriptions WHERE unsubscribed_at = '' ORDER BY created_at"
+        ).fetchall()
         return [self._row_to_sub(r) for r in rows]
+
+    def unsubscribe(self, email: str) -> bool:
+        """软退订：标记退订时间，保留订阅与已发送记录。返回是否原本活跃。"""
+        now = datetime.now(timezone.utc).isoformat()
+        cur = self.conn.execute(
+            "UPDATE subscriptions SET unsubscribed_at = ? WHERE email = ? AND unsubscribed_at = ''",
+            (now, email),
+        )
+        self.conn.commit()
+        return cur.rowcount > 0
 
     def delete(self, email: str) -> None:
         self.conn.execute("DELETE FROM subscriptions WHERE email=?", (email,))
@@ -288,4 +297,5 @@ class SubscriptionStore:
             publish_within=row["publish_within"] or DEFAULT_PUBLISH_WITHIN,
             created_at=row["created_at"] or "",
             updated_at=row["updated_at"] or "",
+            unsubscribed_at=row["unsubscribed_at"] or "",
         )

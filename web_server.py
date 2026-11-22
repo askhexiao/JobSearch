@@ -59,17 +59,22 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, path.read_bytes(), ctype)
 
     def _handle_unsubscribe(self) -> None:
-        """退订：删除订阅邮箱与相关记录（满足 PIPL 可删除 / 撤回同意）。"""
+        """退订：软删除（标记退订时间），保留订阅记录与已发送历史。"""
         query = parse_qs(urlparse(self.path).query)
         email = (query.get("email") or [""])[0].strip().lower()
         if not email:
             self._send_json({"error": "缺少 email 参数"}, 400)
             return
         store = SubscriptionStore(DB_PATH)
-        existed = store.get(email) is not None
-        store.delete(email)
+        sub = store.get(email)
+        if sub is None:
+            msg = "未找到该订阅。"
+        elif sub.unsubscribed_at:
+            msg = "你已退订，无需重复操作。"
+        else:
+            store.unsubscribe(email)
+            msg = "已退订，将不再收到推送。"
         store.close()
-        msg = "已退订，你的订阅已删除，将不再收到推送。" if existed else "未找到该订阅，可能已退订。"
         html = (
             "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
