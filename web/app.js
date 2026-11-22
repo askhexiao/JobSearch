@@ -113,6 +113,9 @@
     var locations = collect(locationList);
     var isUnlimited = unlimited.checked;
 
+    if (!document.getElementById("consent").checked) {
+      setStatus("请先同意隐私说明", false); return;
+    }
     if (!email) { setStatus("请输入邮箱", false); return; }
     if (titles.length === 0 && !isUnlimited && locations.length === 0) {
       setStatus("请至少填写一个职位名称或工作地点", false); return;

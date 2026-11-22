@@ -83,6 +83,8 @@ input:focus { border-color: var(--accent); }
 
 .check-line { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
 .check-line input { width: 16px; height: 16px; }
+.consent { align-items: flex-start; margin: 4px 0 16px; }
+.consent span { font-weight: 400; font-size: 13px; color: var(--muted); }
 
 #location-block.disabled { opacity: .5; pointer-events: none; }
 

@@ -12,7 +12,7 @@ import json
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
@@ -57,6 +57,31 @@ class Handler(BaseHTTPRequestHandler):
         ctype = _MIME.get(path.suffix.lower(), "application/octet-stream")
         self._send(200, path.read_bytes(), ctype)
 
+    def _handle_unsubscribe(self) -> None:
+        """退订：删除订阅邮箱与相关记录（满足 PIPL 可删除 / 撤回同意）。"""
+        query = parse_qs(urlparse(self.path).query)
+        email = (query.get("email") or [""])[0].strip().lower()
+        if not email:
+            self._send_json({"error": "缺少 email 参数"}, 400)
+            return
+        store = SubscriptionStore(DB_PATH)
+        existed = store.get(email) is not None
+        store.delete(email)
+        store.close()
+        msg = "已退订，你的订阅已删除，将不再收到推送。" if existed else "未找到该订阅，可能已退订。"
+        html = (
+            "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'>"
+            "<meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>UniFit100 退订</title></head>"
+            "<body style='font-family:-apple-system,PingFang SC,sans-serif;max-width:480px;"
+            "margin:60px auto;text-align:center;color:#1f2937'>"
+            "<h2 style='color:#1a3c6e'>UniFit100 | Job Search</h2>"
+            f"<p>{msg}</p>"
+            "<p><a href='/' style='color:#2f6fb0'>返回订阅页</a></p>"
+            "</body></html>"
+        )
+        self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
+
     # ---------- GET ----------
     def do_GET(self) -> None:
         path = urlparse(self.path).path
@@ -66,6 +91,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(BRAND_DIR / "logo.png")
         elif path == "/api/locations":
             self._send_json({"locations": LOCATION_CHOICES})
+        elif path == "/unsubscribe":
+            self._handle_unsubscribe()
         elif path.startswith("/static/"):
             # 仅允许 web/ 目录内的静态资源，防目录穿越。
             rel = path[len("/static/"):]

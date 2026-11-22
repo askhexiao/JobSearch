@@ -59,7 +59,7 @@ def fetch_tasks(sub) -> list:
     return [(t, p) for t in titles for p in provinces]
 
 
-def render_email(sub, jobs) -> str:
+def render_email(sub, jobs, web_base_url: str) -> str:
     lines = [
         "Hi，以下是你订阅的新岗位：",
         "",
@@ -75,6 +75,7 @@ def render_email(sub, jobs) -> str:
     lines.append("——")
     lines.append("UniFit100 | Job Search 免费职位订阅工具")
     lines.append(f"求职咨询 / 简历辅导：{CONSULT_URL}")
+    lines.append(f"退订：{web_base_url}/unsubscribe?email={sub.email}")
     return "\n".join(lines)
 
 
@@ -85,6 +86,7 @@ def main() -> int:
     args = parser.parse_args()
 
     config = load_config()
+    web_base_url = (config or {}).get("web_base_url", "http://127.0.0.1:8000")
     dry_run = args.dry_run or config is None
     if config is None and not args.dry_run:
         print("未找到 config.json，自动进入 dry-run 模式（不发送邮件）。")
@@ -144,7 +146,7 @@ def main() -> int:
             continue
 
         subject = f"【UniFit100】新岗位 {len(new_jobs)} 个"
-        body = render_email(sub, new_jobs)
+        body = render_email(sub, new_jobs, web_base_url)
         if dry_run:
             print(f"[dry-run] {sub.email}：{len(new_jobs)} 个新岗位（未发送）")
             print(body[:600])
