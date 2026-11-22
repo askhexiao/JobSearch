@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UniFit100 | Job Search — 免费职位订阅</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <img class="logo" src="/logo.png" alt="UniFit100 | Job Search" />
+      <p class="tagline">订阅你关心的职位，新岗位邮件推送到邮箱 · 免费 · 只推公开职位</p>
+    </header>
+
+    <section class="card">
+      <h1>订阅职位</h1>
+      <form id="subscribe-form" novalidate>
+        <div class="field">
+          <label for="email">邮箱 <span class="req">*</span></label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required />
+        </div>
+
+        <div class="field">
+          <label>职位名称 <span class="hint">（最多 3 个）</span></label>
+          <div id="title-list"></div>
+          <button type="button" id="add-title" class="add-btn">+ 添加职位</button>
+        </div>
+
+        <div class="field">
+          <label class="check-line">
+            <input type="checkbox" id="unlimited" />
+            工作地点不限
+            <span class="hint">（勾选后无需再选择地点）</span>
+          </label>
+          <div id="location-block">
+            <div id="location-list"></div>
+            <button type="button" id="add-location" class="add-btn">+ 添加地点</button>
+          </div>
+        </div>
+
+        <datalist id="location-options"></datalist>
+
+        <button type="submit" class="submit-btn" id="submit-btn">立即订阅</button>
+        <p id="status" class="status" role="status"></p>
+      </form>
+    </section>
+
+    <footer class="footer">
+      <p>投递请回到原官网 · 本项目不替代任何平台</p>
+      <p>求职咨询 / 简历辅导：<a href="https://unifit100.com/consultant" target="_blank" rel="noopener">unifit100.com/consultant</a></p>
+    </footer>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

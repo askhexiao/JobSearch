@@ -28,15 +28,18 @@ BOARDS = [
     "riotgames",
 ]
 
-# 中国大陆地点关键词（用于从全部岗位中筛出中国岗位）。
-CHINA_KEYWORDS = [
-    "China", "Beijing", "Shanghai", "Shenzhen", "Guangzhou", "Hangzhou",
+# 中国大陆城市关键词（命中即视为大陆岗位）。
+MAINLAND_CITY_KEYWORDS = [
+    "Beijing", "Shanghai", "Shenzhen", "Guangzhou", "Hangzhou",
     "Chengdu", "Nanjing", "Wuhan", "Suzhou", "Tianjin", "Xi'an", "Xian",
     "Qingdao", "Chongqing", "Changsha", "Dalian", "Xiamen", "Fuzhou",
     "Kunming", "Zhengzhou", "Hefei", "Jinan", "Ningbo", "Dongguan",
     "Foshan", "Zhuhai", "Harbin", "Shenyang", "Wuxi", "Nantong",
     "Changzhou", "Wenzhou", "Zhongshan", "Hohhot", "Urumqi", "Sanya",
 ]
+
+# 港澳台（须排除，只保留中国大陆）。
+EXCLUDE_KEYWORDS = ["Hong Kong", "Macau", "Macao", "Taiwan", "Taipei"]
 
 _TAG_RE = re.compile(r"<[^>]+>")
 _WS_RE = re.compile(r"\s+")
@@ -104,7 +107,14 @@ class GreenhouseAdapter(BaseAdapter):
 
 
 def _is_china(location: str) -> bool:
-    return any(k in location for k in CHINA_KEYWORDS)
+    """判断是否中国大陆岗位（排除港澳台）。"""
+    if not location:
+        return False
+    if any(k in location for k in MAINLAND_CITY_KEYWORDS):
+        return True
+    if any(k in location for k in EXCLUDE_KEYWORDS):
+        return False
+    return "China" in location
 
 
 def _clean_html(raw: str) -> str:

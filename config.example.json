@@ -1,0 +1,11 @@
+{
+  "smtp": {
+    "host": "smtpdm.aliyun.com",
+    "port": 465,
+    "ssl": true,
+    "username": "noreply@your-domain.com",
+    "password": "YOUR_SMTP_PASSWORD",
+    "from_name": "UniFit100",
+    "from_addr": "noreply@your-domain.com"
+  }
+}
