@@ -17,7 +17,7 @@ import time
 import urllib.parse
 from datetime import datetime, timezone
 
-from .base import BaseAdapter
+from .base import BaseAdapter, FetchError
 from ..locations import AREA_CODES, city_area_code, provinces_with_cities
 from ..models import Job
 from ..normalize import normalize_company_nature, normalize_education, normalize_recruit_type
@@ -87,13 +87,17 @@ class NCSSAdapter(BaseAdapter):
         for prov, cities in provinces_with_cities():
             if prov in {"台湾", "香港", "澳门"}:
                 continue
-            if prov in municipalities:
-                batch = self.fetch(keyword=keyword, area=prov, max_pages=max_pages)
-            else:
+            try:
+                if prov in municipalities:
+                    batch = self.fetch(keyword=keyword, area=prov, max_pages=max_pages)
+                else:
+                    batch = []
+                    for city in cities:
+                        cn = city[:-1] if city.endswith("市") else city
+                        batch.extend(self.fetch_by_city(keyword=keyword, city_name=cn, province=prov, max_pages=max_pages))
+            except FetchError as exc:
+                print(f"  [跳过] {prov} 抓取失败：{exc}")
                 batch = []
-                for city in cities:
-                    cn = city[:-1] if city.endswith("市") else city
-                    batch.extend(self.fetch_by_city(keyword=keyword, city_name=cn, province=prov, max_pages=max_pages))
             for job in batch:
                 if job.job_id not in seen:
                     seen.add(job.job_id)

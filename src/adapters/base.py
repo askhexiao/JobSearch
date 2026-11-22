@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import socket
 import time
 import urllib.error
 import urllib.request
@@ -61,7 +62,7 @@ class BaseAdapter:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     body = resp.read().decode("utf-8", errors="replace")
                     return json.loads(body)
-            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, socket.timeout, json.JSONDecodeError) as exc:
                 last_err = exc
                 time.sleep(1.0 * (attempt + 1))
         raise FetchError(f"请求失败（已重试 {self.max_retries} 次）: {url} -> {last_err}")
@@ -84,7 +85,7 @@ class BaseAdapter:
                 req = urllib.request.Request(url, data=body, headers=headers, method="POST")
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     return json.loads(resp.read().decode("utf-8", errors="replace"))
-            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, socket.timeout, json.JSONDecodeError) as exc:
                 last_err = exc
                 time.sleep(1.0 * (attempt + 1))
         raise FetchError(f"请求失败（已重试 {self.max_retries} 次）: {url} -> {last_err}")
