@@ -40,24 +40,54 @@ def load_config() -> dict | None:
         return None
 
 
+def _city_label(loc: str) -> str:
+    """把地点路径简化为城市名：'广东省-深圳市'->'深圳'、'北京市-市辖区'->'北京'。"""
+    if loc == "不限":
+        return "不限"
+    if "-" in loc:
+        prov, city = loc.split("-", 1)
+        if city == "市辖区":
+            return prov[:-1] if prov.endswith("市") else prov
+        return city[:-1] if city.endswith("市") else city
+    return loc
+
+
+def _sub_summary(sub) -> str:
+    """订阅摘要：职位 · 招聘类型 · 地点 · 发布时长。"""
+    parts = [("、".join(sub.titles)) if sub.titles else "不限职位"]
+    parts.append(sub.recruit_type)
+    if sub.location_unlimited:
+        parts.append("不限地点")
+    elif sub.locations:
+        parts.append("、".join(_city_label(l) for l in sub.locations))
+    parts.append(sub.publish_within)
+    return " · ".join(parts)
+
+
 def render_email(sub, jobs, web_base_url: str) -> str:
+    summary = _sub_summary(sub)
     lines = [
-        "Hi，以下是你订阅的新岗位：",
+        "UniFit100 | Job Search",
         "",
+        f"Hi，你订阅的职位有新岗位（共 {len(jobs)} 个）：",
+        "",
+        f"【订阅】{summary}",
+        "",
+        "——",
     ]
-    for j in jobs[:MAX_JOBS_PER_EMAIL]:
+    for idx, j in enumerate(jobs[:MAX_JOBS_PER_EMAIL], 1):
         title = j.title
         if j.language == "英文":
             title = f"{title}（英文）"
-        lines.append(f"• {title}")
-        lines.append(f"  {j.company} | {j.location} | {j.salary or '薪资面议'} | {j.publish_date}")
-        lines.append(f"  投递：{j.job_url}")
+        lines.append(f"{idx}. {title}")
+        lines.append(f"   {j.company} | {j.location} | {j.salary or '薪资面议'} | {j.publish_date}")
+        lines.append(f"   投递 → {j.job_url}")
         lines.append("")
     if len(jobs) > MAX_JOBS_PER_EMAIL:
-        lines.append(f"（本次共 {len(jobs)} 个新岗位，仅展示前 {MAX_JOBS_PER_EMAIL} 个）")
+        lines.append(f"（仅展示前 {MAX_JOBS_PER_EMAIL} 个，共 {len(jobs)} 个）")
         lines.append("")
     lines.append("——")
-    lines.append("UniFit100 | Job Search 免费职位订阅工具")
+    lines.append("UniFit100 | Job Search · 免费职位订阅工具")
     lines.append(f"求职咨询 / 简历辅导：{CONSULT_URL}")
     lines.append(f"退订：{web_base_url}/unsubscribe?email={sub.email}")
     return "\n".join(lines)
