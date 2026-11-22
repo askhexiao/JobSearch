@@ -19,7 +19,7 @@ from datetime import date, datetime, timezone
 
 from .locations import location_matches
 from .models import Job
-from .normalize import normalize_recruit_type
+from .normalize import normalize_recruit_type, title_aliases
 
 MAX_TITLES = 5
 MAX_LOCATIONS = 5
@@ -182,7 +182,7 @@ def matches(sub: Subscription, job: Job) -> bool:
     """订阅是否匹配某职位（职位名 + 地点 + 招聘类型 + 发布时长）。"""
     if sub.titles:
         title = (job.title or "").lower()
-        if not any(t and t.lower() in title for t in sub.titles):
+        if not any(a and a.lower() in title for t in sub.titles for a in title_aliases(t)):
             return False
     if not sub.location_unlimited and sub.locations:
         locs = [l for l in sub.locations if l != UNLIMITED]

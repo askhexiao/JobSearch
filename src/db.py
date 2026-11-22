@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS jobs (
     source            TEXT NOT NULL,
     job_id            TEXT NOT NULL,
     title             TEXT DEFAULT '',
+    language          TEXT DEFAULT '',
     company           TEXT DEFAULT '',
     location          TEXT DEFAULT '',
     location_province TEXT DEFAULT '',
@@ -56,6 +57,7 @@ _NEW_COLUMNS = {
     "education_level": "TEXT DEFAULT ''",
     "recruit_type": "TEXT DEFAULT ''",
     "deadline": "TEXT DEFAULT ''",
+    "language": "TEXT DEFAULT ''",
 }
 
 

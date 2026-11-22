@@ -46,7 +46,10 @@ def render_email(sub, jobs, web_base_url: str) -> str:
         "",
     ]
     for j in jobs[:MAX_JOBS_PER_EMAIL]:
-        lines.append(f"• {j.title}")
+        title = j.title
+        if j.language == "英文":
+            title = f"{title}（英文）"
+        lines.append(f"• {title}")
         lines.append(f"  {j.company} | {j.location} | {j.salary or '薪资面议'} | {j.publish_date}")
         lines.append(f"  投递：{j.job_url}")
         lines.append("")

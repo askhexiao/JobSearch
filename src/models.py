@@ -9,12 +9,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, fields
 
+from .normalize import detect_language
+
 
 @dataclass
 class Job:
     source: str = ""             # 数据源标识，如 "24365" / "greenhouse"
     job_id: str = ""             # 数据源内唯一 ID
     title: str = ""              # 职位名称
+    language: str = ""           # 语言标签：英文 / 中文 / 空
     company: str = ""            # 公司名称
     location: str = ""           # 展示用地点字符串
     location_province: str = ""  # 省（规范化，如"广东"）
@@ -36,6 +39,10 @@ class Job:
     deadline: str = ""           # 截止日期 YYYY-MM-DD（无则空）
     job_url: str = ""            # 回原官网投递链接
     description: str = ""        # 职位描述（纯文本）
+
+    def __post_init__(self):
+        if not self.language:
+            self.language = detect_language(self.title)
 
     def to_dict(self) -> dict:
         return {f.name: getattr(self, f.name) for f in fields(self)}
