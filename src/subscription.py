@@ -1,20 +1,21 @@
 # -*- coding: utf-8 -*-
 """订阅模型 + SQLite 存储 + 职位匹配。
 
-订阅字段（对应原型图）：
+订阅字段（对应原型图 + 发布时长设置）：
 - 职位名称（≤5，2 个默认值可编辑）
 - 招聘类型：校招 / 社招
 - 订阅邮箱
 - 工作地点（≤5，「不限」表示不限地点）
 - 意向雇主（优质雇主数据库）
 - 推送频率：每周 1 次 / 每天 1 次
+- 岗位发布时长：最近 1 周 / 2 周 / 1 个月 / 3 个月 / 不限
 """
 from __future__ import annotations
 
 import json
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from .locations import location_matches
 from .models import Job
@@ -25,6 +26,16 @@ UNLIMITED = "不限"
 RECRUIT_TYPES = ["校招", "社招"]
 FREQUENCIES = ["每周1次", "每天1次"]
 DEFAULT_EMPLOYER_DB = "UniFit100优质雇主数据库 - 2027"
+
+# 岗位发布时长：选项 -> 天数（None 表示不限）。
+PUBLISH_WITHIN_OPTIONS = {
+    "最近1周": 7,
+    "最近2周": 14,
+    "最近1个月": 30,
+    "最近3个月": 90,
+    "不限": None,
+}
+DEFAULT_PUBLISH_WITHIN = "最近1个月"
 
 # 校招判定关键词（软过滤：校招只推校招/实习，社招排除校招/实习）。
 CAMPUS_KEYWORDS = [
@@ -41,6 +52,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     recruit_type       TEXT DEFAULT '校招',
     employer_db        TEXT DEFAULT '',
     frequency          TEXT DEFAULT '每周1次',
+    publish_within     TEXT DEFAULT '最近1个月',
     created_at         TEXT DEFAULT '',
     updated_at         TEXT DEFAULT ''
 );
@@ -57,6 +69,7 @@ _NEW_COLUMNS = {
     "recruit_type": "TEXT DEFAULT '校招'",
     "employer_db": "TEXT DEFAULT ''",
     "frequency": "TEXT DEFAULT '每周1次'",
+    "publish_within": "TEXT DEFAULT '最近1个月'",
 }
 
 
@@ -69,6 +82,7 @@ class Subscription:
     recruit_type: str = "校招"                          # 校招 / 社招
     employer_db: str = DEFAULT_EMPLOYER_DB
     frequency: str = "每周1次"                           # 每周1次 / 每天1次
+    publish_within: str = DEFAULT_PUBLISH_WITHIN         # 岗位发布时长
     created_at: str = ""
     updated_at: str = ""
 
@@ -81,6 +95,7 @@ class Subscription:
             "recruit_type": self.recruit_type,
             "employer_db": self.employer_db,
             "frequency": self.frequency,
+            "publish_within": self.publish_within,
         }
 
 
@@ -101,6 +116,7 @@ def validate_subscription(payload: dict) -> tuple:
     recruit_type = (payload.get("recruit_type") or "").strip()
     employer_db = (payload.get("employer_db") or "").strip() or DEFAULT_EMPLOYER_DB
     frequency = (payload.get("frequency") or "").strip()
+    publish_within = (payload.get("publish_within") or "").strip() or DEFAULT_PUBLISH_WITHIN
 
     if not email or "@" not in email or "." not in email.split("@")[-1]:
         return None, "请输入有效的邮箱地址"
@@ -113,6 +129,9 @@ def validate_subscription(payload: dict) -> tuple:
 
     if frequency not in FREQUENCIES:
         return None, "请选择推送频率"
+
+    if publish_within not in PUBLISH_WITHIN_OPTIONS:
+        return None, "请选择岗位发布时长"
 
     location_unlimited = UNLIMITED in locations
     if location_unlimited:
@@ -133,6 +152,7 @@ def validate_subscription(payload: dict) -> tuple:
         recruit_type=recruit_type,
         employer_db=employer_db,
         frequency=frequency,
+        publish_within=publish_within,
     )
     return sub, None
 
@@ -149,8 +169,19 @@ def is_campus(job: Job) -> bool:
     return any(k in t for k in CAMPUS_KEYWORDS)
 
 
+def _within_days(publish_date: str, days: int) -> bool:
+    """发布日期是否在最近 days 天内；无日期或格式异常时不拦截（宽松）。"""
+    if not publish_date:
+        return True
+    try:
+        d = datetime.strptime(publish_date[:10], "%Y-%m-%d").date()
+    except ValueError:
+        return True
+    return (date.today() - d).days <= days
+
+
 def matches(sub: Subscription, job: Job) -> bool:
-    """订阅是否匹配某职位（职位名 + 地点 + 招聘类型）。"""
+    """订阅是否匹配某职位（职位名 + 地点 + 招聘类型 + 发布时长）。"""
     if sub.titles:
         title = (job.title or "").lower()
         if not any(t and t.lower() in title for t in sub.titles):
@@ -162,6 +193,9 @@ def matches(sub: Subscription, job: Job) -> bool:
     if sub.recruit_type == "校招" and not campus:
         return False
     if sub.recruit_type == "社招" and campus:
+        return False
+    days = PUBLISH_WITHIN_OPTIONS.get(sub.publish_within)
+    if days is not None and not _within_days(job.publish_date, days):
         return False
     return True
 
@@ -189,17 +223,17 @@ class SubscriptionStore:
         if self.get(sub.email) is None:
             self.conn.execute(
                 "INSERT INTO subscriptions "
-                "(email, titles, locations, location_unlimited, recruit_type, employer_db, frequency, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "(email, titles, locations, location_unlimited, recruit_type, employer_db, frequency, publish_within, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (row["email"], row["titles"], row["locations"], row["location_unlimited"],
-                 row["recruit_type"], row["employer_db"], row["frequency"], now, now),
+                 row["recruit_type"], row["employer_db"], row["frequency"], row["publish_within"], now, now),
             )
         else:
             self.conn.execute(
                 "UPDATE subscriptions SET titles=?, locations=?, location_unlimited=?, "
-                "recruit_type=?, employer_db=?, frequency=?, updated_at=? WHERE email=?",
+                "recruit_type=?, employer_db=?, frequency=?, publish_within=?, updated_at=? WHERE email=?",
                 (row["titles"], row["locations"], row["location_unlimited"],
-                 row["recruit_type"], row["employer_db"], row["frequency"], now, sub.email),
+                 row["recruit_type"], row["employer_db"], row["frequency"], row["publish_within"], now, sub.email),
             )
         self.conn.commit()
 
@@ -249,6 +283,7 @@ class SubscriptionStore:
             recruit_type=row["recruit_type"] or "校招",
             employer_db=row["employer_db"] or DEFAULT_EMPLOYER_DB,
             frequency=row["frequency"] or "每周1次",
+            publish_within=row["publish_within"] or DEFAULT_PUBLISH_WITHIN,
             created_at=row["created_at"] or "",
             updated_at=row["updated_at"] or "",
         )

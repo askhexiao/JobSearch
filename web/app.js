@@ -162,6 +162,7 @@
     var recruitType = document.getElementById("recruit-type").value;
     var employerDb = document.getElementById("employer-db").value;
     var frequency = document.getElementById("frequency").value;
+    var publishWithin = document.getElementById("publish-within").value;
 
     if (!document.getElementById("consent").checked) {
       setStatus("请先同意隐私说明", false); return;
@@ -184,6 +185,7 @@
         recruit_type: recruitType,
         employer_db: employerDb,
         frequency: frequency,
+        publish_within: publishWithin,
       }),
     })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
