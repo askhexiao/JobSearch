@@ -117,12 +117,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"ok": False, "error": "请求体不是有效 JSON"}, 400)
             return
 
-        sub, err = validate_subscription(
-            payload.get("email"),
-            payload.get("titles"),
-            payload.get("locations"),
-            payload.get("location_unlimited"),
-        )
+        sub, err = validate_subscription(payload)
         if err:
             self._send_json({"ok": False, "error": err}, 400)
             return

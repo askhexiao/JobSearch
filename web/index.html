@@ -16,30 +16,55 @@
     <section class="card">
       <h1>订阅职位</h1>
       <form id="subscribe-form" novalidate>
+        <!-- 职位名称 -->
         <div class="field">
-          <label for="email">邮箱 <span class="req">*</span></label>
+          <label>职位名称 <span class="req">*</span>
+            <span class="hint">（最多 5 个）</span>
+          </label>
+          <div id="title-list"></div>
+          <button type="button" id="add-title" class="add-link">+ 添加职位名称</button>
+        </div>
+
+        <!-- 招聘类型 -->
+        <div class="field">
+          <label for="recruit-type">招聘类型 <span class="req">*</span></label>
+          <select id="recruit-type" name="recruit_type">
+            <option value="校招" selected>校招</option>
+            <option value="社招">社招</option>
+          </select>
+        </div>
+
+        <!-- 订阅邮箱 -->
+        <div class="field">
+          <label for="email">订阅邮箱 <span class="req">*</span></label>
           <input type="email" id="email" name="email" placeholder="you@example.com" required />
         </div>
 
+        <!-- 工作地点 -->
         <div class="field">
-          <label>职位名称 <span class="hint">（最多 3 个）</span></label>
-          <div id="title-list"></div>
-          <button type="button" id="add-title" class="add-btn">+ 添加职位</button>
-        </div>
-
-        <div class="field">
-          <label class="check-line">
-            <input type="checkbox" id="unlimited" />
-            工作地点不限
-            <span class="hint">（勾选后无需再选择地点）</span>
+          <label>工作地点 <span class="req">*</span>
+            <span class="hint">（最多 5 个，选「不限」无需再添加）</span>
           </label>
-          <div id="location-block">
-            <div id="location-list"></div>
-            <button type="button" id="add-location" class="add-btn">+ 添加地点</button>
-          </div>
+          <div id="location-list"></div>
+          <button type="button" id="add-location" class="add-link">+ 添加工作地点</button>
         </div>
 
-        <datalist id="location-options"></datalist>
+        <!-- 意向雇主 -->
+        <div class="field">
+          <label for="employer-db">意向雇主</label>
+          <select id="employer-db" name="employer_db">
+            <option value="UniFit100优质雇主数据库 - 2027" selected>UniFit100优质雇主数据库 - 2027</option>
+          </select>
+        </div>
+
+        <!-- 推送频率 -->
+        <div class="field">
+          <label for="frequency">推送频率 <span class="req">*</span></label>
+          <select id="frequency" name="frequency">
+            <option value="每周1次" selected>每周 1 次</option>
+            <option value="每天1次">每天 1 次</option>
+          </select>
+        </div>
 
         <label class="check-line consent">
           <input type="checkbox" id="consent" required />
