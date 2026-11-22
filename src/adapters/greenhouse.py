@@ -28,6 +28,7 @@ BOARDS = [
     "mongodb",
     "flexport",
     "riotgames",
+    "godaddy",
 ]
 
 # 中国大陆城市关键词（命中即视为大陆岗位）。
