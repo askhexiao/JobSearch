@@ -61,6 +61,8 @@ input:focus, select:focus { border-color: var(--accent); }
 
 .row { display: flex; gap: 8px; margin-bottom: 8px; }
 .row input { flex: 1; }
+.location-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.location-row select { flex: 1; }
 .remove-btn {
   border: 1px solid var(--border);
   background: #fff;

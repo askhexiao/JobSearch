@@ -40,13 +40,25 @@
           <input type="email" id="email" name="email" placeholder="you@example.com" required />
         </div>
 
-        <!-- 工作地点 -->
+        <!-- 工作地点（省-市-县联动） -->
         <div class="field">
           <label>工作地点 <span class="req">*</span>
-            <span class="hint">（最多 5 个，选「不限」无需再添加）</span>
+            <span class="hint">（省-市-县联动，最多 5 个；选「不限」无需再添加）</span>
           </label>
           <div id="location-list"></div>
           <button type="button" id="add-location" class="add-link">+ 添加工作地点</button>
+        </div>
+
+        <!-- 岗位发布时长 -->
+        <div class="field">
+          <label for="publish-within">岗位发布时长 <span class="req">*</span></label>
+          <select id="publish-within" name="publish_within">
+            <option value="最近1周">最近 1 周</option>
+            <option value="最近2周">最近 2 周</option>
+            <option value="最近1个月" selected>最近 1 个月</option>
+            <option value="最近3个月">最近 3 个月</option>
+            <option value="不限">不限</option>
+          </select>
         </div>
 
         <!-- 意向雇主 -->
@@ -63,18 +75,6 @@
           <select id="frequency" name="frequency">
             <option value="每周1次" selected>每周 1 次</option>
             <option value="每天1次">每天 1 次</option>
-          </select>
-        </div>
-
-        <!-- 岗位发布时长 -->
-        <div class="field">
-          <label for="publish-within">岗位发布时长 <span class="req">*</span></label>
-          <select id="publish-within" name="publish_within">
-            <option value="最近1周">最近 1 周</option>
-            <option value="最近2周">最近 2 周</option>
-            <option value="最近1个月" selected>最近 1 个月</option>
-            <option value="最近3个月">最近 3 个月</option>
-            <option value="不限">不限</option>
           </select>
         </div>
 

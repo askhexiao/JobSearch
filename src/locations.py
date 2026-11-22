@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-"""地点与地区码：省级行政区划代码 + 主要城市中英文映射。
+"""地点与地区码：省级行政区划代码 + 城市中英文映射 + 省-市-县路径匹配。
 
-用于：
-- 24365 抓取（areaCode = 省级前两位，见 AREA_CODES）
-- 订阅地点匹配（中文省份/城市 ↔ 外企英文城市，见 location_matches）
+地点值有两种形态：
+- 单名称（兼容旧数据）：如「广东」「深圳」
+- 省-市-县路径（前端联动选择器）：如「广东省-深圳市-南山区」
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ AREA_CODES = {
     "澳门": "82",
 }
 
-# 主要城市：中文名 -> (所属省份, 英文名)。用于跨源地点匹配。
+# 主要城市：中文名 -> (所属省份, 英文名)。用于外企英文地点匹配。
 CITIES = {
     "北京": ("北京", "Beijing"), "上海": ("上海", "Shanghai"),
     "天津": ("天津", "Tianjin"), "重庆": ("重庆", "Chongqing"),
@@ -43,41 +43,89 @@ CITIES = {
     "呼和浩特": ("内蒙古", "Hohhot"), "拉萨": ("西藏", "Lhasa"),
 }
 
-# 非中国大陆地区（订阅与前端均不提供）。
 _NON_MAINLAND = {"台湾", "香港", "澳门"}
+_MUNICIPALITIES = {"北京", "上海", "天津", "重庆"}
 
 _CITY_TO_PROVINCE = {c: p for c, (p, _e) in CITIES.items()}
 _CITY_EN = {c: e for c, (_p, e) in CITIES.items()}
 
-# 省份 -> 其下主要城市（中英文），用于省份订阅匹配外企岗位。
+# 省份 -> 其下主要城市（中英文），用于「只选省份」时匹配外企岗位。
 _PROVINCE_CITIES: dict[str, set] = {}
 for _city, (_prov, _en) in CITIES.items():
     _PROVINCE_CITIES.setdefault(_prov, set()).update({_city, _en})
 
-# 前端地点选项（省份 + 城市，不含「全国」「不限」与港澳台）。
+# 前端旧版地点候选（省份 + 城市，不含「全国」「不限」与港澳台）。
 LOCATION_CHOICES = sorted(
     (set(AREA_CODES.keys()) | set(CITIES.keys())) - {"全国"} - _NON_MAINLAND
 )
 
+# 行政区划后缀（长优先）与伪层级（如直辖市的「市辖区」）。
+_ADMIN_SUFFIXES = sorted(
+    ["特别行政区", "自治区", "自治州", "自治县", "地区", "省", "市", "区", "县", "旗", "盟", "林区"],
+    key=len, reverse=True,
+)
+_PSEUDO = {"市辖区", "省直辖县级行政区划", "直辖县级行政区划", "自治区直辖县级行政区划"}
+
+
+def _strip_admin_suffix(name: str) -> str:
+    name = (name or "").strip()
+    if name in _PSEUDO:
+        return name
+    for s in _ADMIN_SUFFIXES:
+        if name.endswith(s) and len(name) > len(s):
+            return name[: -len(s)]
+    return name
+
+
+def _components(location: str) -> list:
+    """把地点（路径或单名称）拆成规范化后的省/市/县组件。"""
+    parts = [p.strip() for p in (location or "").split("-") if p.strip()]
+    return [n for n in (_strip_admin_suffix(p) for p in parts) if n and n not in _PSEUDO]
+
 
 def province_of(location: str) -> str:
-    """返回地点所属省份；本身是省份则返回自身；未知返回空串。"""
-    if location in CITIES:
-        return CITIES[location][0]
-    if location in AREA_CODES:
-        return location
+    """返回地点所属省份名；本身是省份返回自身；未知返回空串。"""
+    comps = _components(location)
+    if not comps:
+        return ""
+    first = comps[0]
+    if first in AREA_CODES:
+        return first
+    if first in CITIES:
+        return CITIES[first][0]
     return ""
 
 
 def location_tokens(location: str) -> set:
-    """返回该地点可匹配的所有字符串（中文/英文/所属省份及下辖城市）。"""
+    """返回该地点可匹配的所有字符串（中文/英文/所属省份）。"""
     tokens = {location}
-    if location in CITIES:
-        prov, en = CITIES[location]
-        tokens.add(prov)
-        tokens.add(en)
-    elif location in AREA_CODES:
-        tokens.update(_PROVINCE_CITIES.get(location, set()))
+    comps = _components(location)
+    if not comps:
+        return tokens
+
+    prov = comps[0]
+    tokens.add(prov)
+    if prov in CITIES:
+        _p, en = CITIES[prov]
+        tokens.add(_p)   # 所属省份（兼容单城市格式，匹配 24365 省级地点）
+        tokens.add(en)   # 英文
+
+    if prov in _MUNICIPALITIES:
+        if len(comps) >= 2:
+            tokens.add(comps[1])  # 县区
+    else:
+        if len(comps) >= 2:
+            city = comps[1]
+            tokens.add(city)
+            if city in CITIES:
+                tokens.add(CITIES[city][1])
+        else:
+            # 只选了省份 -> 展开其下主要城市（匹配外企英文城市）
+            if prov in AREA_CODES:
+                tokens.update(_PROVINCE_CITIES.get(prov, set()))
+        if len(comps) >= 3:
+            tokens.add(comps[2])
+
     return tokens
 
 

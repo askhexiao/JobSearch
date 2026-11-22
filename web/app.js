@@ -14,7 +14,16 @@
   var submitBtn = document.getElementById("submit-btn");
   var statusEl = document.getElementById("status");
 
-  // ---------- 动态字段 ----------
+  var pcaData = []; // 省-市-县数据
+
+  function makeOption(value, text) {
+    var o = document.createElement("option");
+    o.value = value;
+    o.textContent = text;
+    return o;
+  }
+
+  // ---------- 职位名称（无删除） ----------
   function makeTitleRow(value) {
     var row = document.createElement("div");
     row.className = "row";
@@ -22,113 +31,122 @@
     input.type = "text";
     input.placeholder = "如：产品经理 / 数据分析 / Java 开发";
     input.value = value || "";
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "remove-btn";
-    btn.textContent = "×";
-    btn.setAttribute("aria-label", "删除");
-    btn.addEventListener("click", function () {
-      if (titleCount() <= 1) return; // 至少保留 1 个
-      row.remove();
-      refreshButtons();
-    });
     row.appendChild(input);
-    row.appendChild(btn);
     return row;
-  }
-
-  function makeLocationRow(value, withUnlimited) {
-    var row = document.createElement("div");
-    row.className = "row";
-    var sel = document.createElement("select");
-    if (withUnlimited) {
-      var opt = document.createElement("option");
-      opt.value = UNLIMITED;
-      opt.textContent = UNLIMITED;
-      sel.appendChild(opt);
-    } else {
-      var placeholder = document.createElement("option");
-      placeholder.value = "";
-      placeholder.textContent = "请选择城市";
-      sel.appendChild(placeholder);
-    }
-    populateLocationOptions(sel, value);
-    sel.addEventListener("change", syncLocationUI);
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "remove-btn";
-    btn.textContent = "×";
-    btn.setAttribute("aria-label", "删除");
-    btn.addEventListener("click", function () {
-      if (locationCount() <= 1) return; // 至少保留 1 个
-      row.remove();
-      syncLocationUI();
-    });
-    row.appendChild(sel);
-    row.appendChild(btn);
-    return row;
-  }
-
-  var locationChoices = [];
-  function populateLocationOptions(sel, selected) {
-    locationChoices.forEach(function (loc) {
-      var opt = document.createElement("option");
-      opt.value = loc;
-      opt.textContent = loc;
-      if (loc === selected) opt.selected = true;
-      sel.appendChild(opt);
-    });
   }
 
   function titleCount() { return titleList.querySelectorAll("input").length; }
-  function locationCount() { return locationList.querySelectorAll("select").length; }
 
-  function firstLocationIsUnlimited() {
-    var first = locationList.querySelector("select");
-    return first && first.value === UNLIMITED;
+  addTitle.addEventListener("click", function () {
+    if (titleCount() < MAX_TITLES) {
+      titleList.appendChild(makeTitleRow(""));
+      refreshButtons();
+    }
+  });
+
+  // ---------- 工作地点（省-市-县联动，无删除） ----------
+  function makeLocationRow(initialProvince) {
+    var row = document.createElement("div");
+    row.className = "location-row";
+
+    var prov = document.createElement("select");
+    prov.className = "loc-province";
+    var city = document.createElement("select");
+    city.className = "loc-city";
+    city.disabled = true;
+    var county = document.createElement("select");
+    county.className = "loc-county";
+    county.disabled = true;
+
+    // 省：新增行加「请选择省」，首行默认「不限」
+    if (initialProvince !== UNLIMITED) {
+      prov.appendChild(makeOption("", "请选择省"));
+    }
+    prov.appendChild(makeOption(UNLIMITED, UNLIMITED));
+    pcaData.forEach(function (p) { prov.appendChild(makeOption(p.name, p.name)); });
+    prov.value = initialProvince || "";
+
+    city.appendChild(makeOption("", "请选择市"));
+    county.appendChild(makeOption("", "请选择县区"));
+
+    prov.addEventListener("change", function () { onProvinceChange(row); });
+    city.addEventListener("change", function () { onCityChange(row); });
+
+    row.appendChild(prov);
+    row.appendChild(city);
+    row.appendChild(county);
+    return row;
+  }
+
+  function onProvinceChange(row) {
+    var prov = row.querySelector(".loc-province");
+    var city = row.querySelector(".loc-city");
+    var county = row.querySelector(".loc-county");
+    city.innerHTML = "";
+    county.innerHTML = "";
+
+    if (!prov.value || prov.value === UNLIMITED) {
+      city.disabled = true;
+      county.disabled = true;
+      city.appendChild(makeOption("", "请选择市"));
+      county.appendChild(makeOption("", "请选择县区"));
+      syncLocationUI();
+      return;
+    }
+
+    var p = pcaData.find(function (x) { return x.name === prov.value; });
+    city.disabled = false;
+    city.appendChild(makeOption("", "请选择市"));
+    (p ? p.children : []).forEach(function (c) { city.appendChild(makeOption(c.name, c.name)); });
+    county.disabled = true;
+    county.appendChild(makeOption("", "请选择县区"));
+    syncLocationUI();
+  }
+
+  function onCityChange(row) {
+    var prov = row.querySelector(".loc-province");
+    var city = row.querySelector(".loc-city");
+    var county = row.querySelector(".loc-county");
+    county.innerHTML = "";
+
+    var p = pcaData.find(function (x) { return x.name === prov.value; });
+    var c = p && p.children.find(function (y) { return y.name === city.value; });
+    if (c && c.children && c.children.length) {
+      county.disabled = false;
+      county.appendChild(makeOption("", "请选择县区"));
+      c.children.forEach(function (a) { county.appendChild(makeOption(a.name, a.name)); });
+    } else {
+      county.disabled = true;
+      county.appendChild(makeOption("", "请选择县区"));
+    }
+  }
+
+  function locationCount() { return locationList.querySelectorAll(".location-row").length; }
+
+  function anyUnlimited() {
+    var found = false;
+    locationList.querySelectorAll(".loc-province").forEach(function (p) {
+      if (p.value === UNLIMITED) found = true;
+    });
+    return found;
   }
 
   function syncLocationUI() {
-    var unlimited = firstLocationIsUnlimited();
-    addLocation.disabled = unlimited || locationCount() >= MAX_LOCATIONS;
-    // 「不限」时，多余的地点行无意义，移除之。
-    if (unlimited) {
-      var sels = locationList.querySelectorAll("select");
-      sels.forEach(function (sel, i) {
-        if (i > 0 && sel.closest(".row")) sel.closest(".row").remove();
-      });
-    }
+    addLocation.disabled = anyUnlimited() || locationCount() >= MAX_LOCATIONS;
     refreshButtons();
   }
 
   function refreshButtons() {
     addTitle.disabled = titleCount() >= MAX_TITLES;
-    addLocation.disabled = firstLocationIsUnlimited() || locationCount() >= MAX_LOCATIONS;
+    addLocation.disabled = anyUnlimited() || locationCount() >= MAX_LOCATIONS;
   }
 
-  addTitle.addEventListener("click", function () {
-    if (titleCount() < MAX_TITLES) { titleList.appendChild(makeTitleRow("")); refreshButtons(); }
-  });
   addLocation.addEventListener("click", function () {
-    if (locationCount() < MAX_LOCATIONS && !firstLocationIsUnlimited()) {
-      locationList.appendChild(makeLocationRow("", false));
+    if (locationCount() < MAX_LOCATIONS && !anyUnlimited()) {
+      locationList.appendChild(makeLocationRow(""));
       syncLocationUI();
     }
   });
-
-  // ---------- 地点候选 ----------
-  fetch("/api/locations")
-    .then(function (r) { return r.json(); })
-    .then(function (data) {
-      locationChoices = data.locations || [];
-      // 已渲染的地点下拉补全候选（首行「不限」已在初始化时带上）。
-      locationList.querySelectorAll("select").forEach(function (sel) {
-        if (!sel.querySelector("option[value='" + UNLIMITED + "']")) {
-          populateLocationOptions(sel, "");
-        }
-      });
-    })
-    .catch(function () { /* 候选列表非必需 */ });
 
   // ---------- 表单提交 ----------
   function setStatus(msg, ok) {
@@ -147,9 +165,13 @@
 
   function collectLocations() {
     var out = [];
-    locationList.querySelectorAll("select").forEach(function (s) {
-      var v = s.value;
-      if (v) out.push(v);
+    locationList.querySelectorAll(".location-row").forEach(function (row) {
+      var prov = row.querySelector(".loc-province").value;
+      if (prov === UNLIMITED) { out.push(UNLIMITED); return; }
+      if (!prov) return;
+      var city = row.querySelector(".loc-city").value;
+      var county = row.querySelector(".loc-county").value;
+      out.push([prov, city, county].filter(Boolean).join("-"));
     });
     return out;
   }
@@ -210,13 +232,25 @@
     locationList.innerHTML = "";
     titleList.appendChild(makeTitleRow("设计师"));
     titleList.appendChild(makeTitleRow("产品经理"));
-    locationList.appendChild(makeLocationRow(UNLIMITED, true));
+    locationList.appendChild(makeLocationRow(UNLIMITED));
     syncLocationUI();
   }
 
-  // ---------- 初始化 ----------
-  titleList.appendChild(makeTitleRow("设计师"));
-  titleList.appendChild(makeTitleRow("产品经理"));
-  locationList.appendChild(makeLocationRow(UNLIMITED, true));
-  refreshButtons();
+  // ---------- 初始化（先加载省市区数据） ----------
+  fetch("/static/pca.json")
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      pcaData = data || [];
+      titleList.appendChild(makeTitleRow("设计师"));
+      titleList.appendChild(makeTitleRow("产品经理"));
+      locationList.appendChild(makeLocationRow(UNLIMITED));
+      refreshButtons();
+    })
+    .catch(function () {
+      // 数据加载失败时降级：仍渲染空表单
+      titleList.appendChild(makeTitleRow("设计师"));
+      titleList.appendChild(makeTitleRow("产品经理"));
+      locationList.appendChild(makeLocationRow(UNLIMITED));
+      refreshButtons();
+    });
 })();
