@@ -14,7 +14,9 @@ import re
 import urllib.parse
 
 from .base import BaseAdapter
+from ..locations import parse_english_location
 from ..models import Job
+from ..normalize import normalize_recruit_type
 
 API_URL = "https://boards-api.greenhouse.io/v1/boards/{board_token}/jobs"
 
@@ -85,16 +87,22 @@ class GreenhouseAdapter(BaseAdapter):
 
         title = item.get("title") or ""
         job_type = "实习" if ("intern" in title.lower()) else "全职"
+        location = (item.get("location") or {}).get("name", "")
+        province, city_cn, city_en = parse_english_location(location)
 
         return Job(
             source=self.name,
             job_id=f"{board_token}:{jid}",
             title=title,
             company=item.get("company_name") or board_token,
-            location=(item.get("location") or {}).get("name", ""),
+            location=location,
+            location_province=province,
+            location_city=city_cn,
+            location_city_en=city_en,
             salary="",
             education="",
             job_type=job_type,
+            recruit_type=normalize_recruit_type(title, job_type),
             industry=dept,
             company_nature="外企",
             company_size="",

@@ -12,30 +12,50 @@ from .models import Job, FIELD_NAMES
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS jobs (
-    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-    source          TEXT NOT NULL,
-    job_id          TEXT NOT NULL,
-    title           TEXT DEFAULT '',
-    company         TEXT DEFAULT '',
-    location        TEXT DEFAULT '',
-    salary          TEXT DEFAULT '',
-    education       TEXT DEFAULT '',
-    job_type        TEXT DEFAULT '',
-    industry        TEXT DEFAULT '',
-    company_nature  TEXT DEFAULT '',
-    company_size    TEXT DEFAULT '',
-    head_count      INTEGER DEFAULT 0,
-    publish_date    TEXT DEFAULT '',
-    job_url         TEXT DEFAULT '',
-    description     TEXT DEFAULT '',
-    raw             TEXT DEFAULT '',
-    first_seen_at   TEXT DEFAULT '',
-    last_seen_at    TEXT DEFAULT '',
+    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    source            TEXT NOT NULL,
+    job_id            TEXT NOT NULL,
+    title             TEXT DEFAULT '',
+    company           TEXT DEFAULT '',
+    location          TEXT DEFAULT '',
+    location_province TEXT DEFAULT '',
+    location_city     TEXT DEFAULT '',
+    location_district TEXT DEFAULT '',
+    location_city_en  TEXT DEFAULT '',
+    salary            TEXT DEFAULT '',
+    salary_min        INTEGER DEFAULT 0,
+    salary_max        INTEGER DEFAULT 0,
+    education         TEXT DEFAULT '',
+    education_level   TEXT DEFAULT '',
+    job_type          TEXT DEFAULT '',
+    recruit_type      TEXT DEFAULT '',
+    industry          TEXT DEFAULT '',
+    company_nature    TEXT DEFAULT '',
+    company_size      TEXT DEFAULT '',
+    head_count        INTEGER DEFAULT 0,
+    publish_date      TEXT DEFAULT '',
+    job_url           TEXT DEFAULT '',
+    description       TEXT DEFAULT '',
+    raw               TEXT DEFAULT '',
+    first_seen_at     TEXT DEFAULT '',
+    last_seen_at      TEXT DEFAULT '',
     UNIQUE(source, job_id)
 );
 CREATE INDEX IF NOT EXISTS idx_jobs_location ON jobs(location);
 CREATE INDEX IF NOT EXISTS idx_jobs_company  ON jobs(company);
 """
+
+# 旧库升级：按列增量迁移（幂等）。
+_NEW_COLUMNS = {
+    "location_province": "TEXT DEFAULT ''",
+    "location_city": "TEXT DEFAULT ''",
+    "location_district": "TEXT DEFAULT ''",
+    "location_city_en": "TEXT DEFAULT ''",
+    "salary_min": "INTEGER DEFAULT 0",
+    "salary_max": "INTEGER DEFAULT 0",
+    "education_level": "TEXT DEFAULT ''",
+    "recruit_type": "TEXT DEFAULT ''",
+}
 
 
 class JobStore:
@@ -46,7 +66,16 @@ class JobStore:
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(_SCHEMA)
+        self._migrate()
         self.conn.commit()
+
+    def _migrate(self) -> None:
+        cols = {r["name"] for r in self.conn.execute("PRAGMA table_info(jobs)")}
+        for name, ddl in _NEW_COLUMNS.items():
+            if name not in cols:
+                self.conn.execute(f"ALTER TABLE jobs ADD COLUMN {name} {ddl}")
+        # 依赖新列的索引在迁移后创建
+        self.conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_recruit_type ON jobs(recruit_type)")
 
     def upsert(self, job: Job) -> bool:
         """插入或更新一条职位。

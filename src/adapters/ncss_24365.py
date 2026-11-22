@@ -20,6 +20,7 @@ from datetime import datetime, timezone
 from .base import BaseAdapter
 from ..locations import AREA_CODES
 from ..models import Job
+from ..normalize import normalize_company_nature, normalize_education, normalize_recruit_type
 
 API_URL = "https://www.ncss.cn/student/jobs/jobslist/ajax/"
 REFERER = "https://www.ncss.cn/student/jobs/index.html"
@@ -83,13 +84,17 @@ class NCSSAdapter(BaseAdapter):
 
         low, high = item.get("lowMonthPay"), item.get("highMonthPay")
         salary = ""
+        salary_min = salary_max = 0
         if low is not None and high is not None:
             if low == 0 and high == 0:
                 salary = "面议"
-            elif low == high:
-                salary = f"{_fmt_pay(low)}K"
             else:
-                salary = f"{_fmt_pay(low)}-{_fmt_pay(high)}K"
+                if low == high:
+                    salary = f"{_fmt_pay(low)}K"
+                else:
+                    salary = f"{_fmt_pay(low)}-{_fmt_pay(high)}K"
+                salary_min = int(float(low) * 1000)
+                salary_max = int(float(high) * 1000)
 
         publish_date = ""
         pub = item.get("publishDate")
@@ -101,6 +106,7 @@ class NCSSAdapter(BaseAdapter):
 
         title = item.get("jobName") or ""
         job_type = "实习" if ("实习" in title or "intern" in title.lower()) else "全职"
+        education = item.get("degreeName") or ""
 
         return Job(
             source=self.name,
@@ -108,11 +114,16 @@ class NCSSAdapter(BaseAdapter):
             title=title,
             company=item.get("recName") or "",
             location=item.get("areaCodeName") or "",
+            location_province=item.get("areaCodeName") or "",
             salary=salary,
-            education=item.get("degreeName") or "",
+            salary_min=salary_min,
+            salary_max=salary_max,
+            education=education,
+            education_level=normalize_education(education),
             job_type=job_type,
+            recruit_type=normalize_recruit_type(title, job_type),
             industry=item.get("industrySectorsName") or item.get("industryName") or "",
-            company_nature=item.get("recProperty") or "",
+            company_nature=normalize_company_nature(item.get("recProperty") or ""),
             company_size=item.get("recScale") or "",
             head_count=int(item.get("headCount") or 0),
             publish_date=publish_date,

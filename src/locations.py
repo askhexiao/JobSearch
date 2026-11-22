@@ -54,6 +54,20 @@ _PROVINCE_CITIES: dict[str, set] = {}
 for _city, (_prov, _en) in CITIES.items():
     _PROVINCE_CITIES.setdefault(_prov, set()).update({_city, _en})
 
+# 英文城市名 -> 中文（用于从外企英文地点反推中文）。
+_CITY_BY_EN = {e: c for c, (_p, e) in CITIES.items()}
+
+
+def parse_english_location(raw: str) -> tuple:
+    """从英文地点串提取 (省, 市中文, 市英文)；无匹配时返回空串。"""
+    if not raw:
+        return "", "", ""
+    rl = raw.lower()
+    for en, cn in _CITY_BY_EN.items():
+        if en.lower() in rl:
+            return CITIES[cn][0], cn, en
+    return "", "", ""
+
 # 前端旧版地点候选（省份 + 城市，不含「全国」「不限」与港澳台）。
 LOCATION_CHOICES = sorted(
     (set(AREA_CODES.keys()) | set(CITIES.keys())) - {"全国"} - _NON_MAINLAND

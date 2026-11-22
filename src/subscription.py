@@ -19,6 +19,7 @@ from datetime import date, datetime, timezone
 
 from .locations import location_matches
 from .models import Job
+from .normalize import normalize_recruit_type
 
 MAX_TITLES = 5
 MAX_LOCATIONS = 5
@@ -37,11 +38,13 @@ PUBLISH_WITHIN_OPTIONS = {
 }
 DEFAULT_PUBLISH_WITHIN = "最近1个月"
 
-# 校招判定关键词（软过滤：校招只推校招/实习，社招排除校招/实习）。
-CAMPUS_KEYWORDS = [
-    "校招", "应届", "实习", "管培", "毕业生", "培训生",
-    "intern", "campus", "graduate", "trainee", "new grad",
-]
+# 校招判定（优先用标准化 recruit_type，旧数据回退标题启发式）。
+
+
+def is_campus(job: Job) -> bool:
+    if job.recruit_type:
+        return job.recruit_type in ("校招", "实习")
+    return normalize_recruit_type(job.title, job.job_type) in ("校招", "实习")
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS subscriptions (
@@ -162,11 +165,9 @@ def job_key(job: Job) -> str:
 
 
 def is_campus(job: Job) -> bool:
-    """判断是否为校招/实习类岗位。"""
-    if job.job_type == "实习":
-        return True
-    t = (job.title or "").lower()
-    return any(k in t for k in CAMPUS_KEYWORDS)
+    if job.recruit_type:
+        return job.recruit_type in ("校招", "实习")
+    return normalize_recruit_type(job.title, job.job_type) in ("校招", "实习")
 
 
 def _within_days(publish_date: str, days: int) -> bool:
@@ -187,7 +188,8 @@ def matches(sub: Subscription, job: Job) -> bool:
         if not any(t and t.lower() in title for t in sub.titles):
             return False
     if not sub.location_unlimited and sub.locations:
-        if not any(location_matches(loc, job.location) for loc in sub.locations):
+        locs = [l for l in sub.locations if l != UNLIMITED]
+        if locs and not any(location_matches(loc, job.location) for loc in locs):
             return False
     campus = is_campus(job)
     if sub.recruit_type == "校招" and not campus:

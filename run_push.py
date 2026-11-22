@@ -139,7 +139,16 @@ def main() -> int:
                 pool.append(job)
 
         matched = [j for j in pool if matches(sub, j)]
-        new_jobs = [j for j in matched if not sub_store.is_sent(sub.email, job_key(j))]
+        # 跨源去重：同一「公司 + 职位 + 城市」只保留一条（多渠道转载去重）
+        seen_keys = set()
+        deduped = []
+        for j in matched:
+            k = j.dedup_key()
+            if k in seen_keys:
+                continue
+            seen_keys.add(k)
+            deduped.append(j)
+        new_jobs = [j for j in deduped if not sub_store.is_sent(sub.email, job_key(j))]
 
         if not new_jobs:
             print(f"[跳过] {sub.email}：无新岗位")
