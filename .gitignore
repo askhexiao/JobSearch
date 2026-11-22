@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# 本地 SQLite（运行后生成）
+unifit100.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# macOS
+.DS_Store
+
+# IDE / 编辑器
+.idea/
+.vscode/
+*.swp
