@@ -14,7 +14,7 @@
   var submitBtn = document.getElementById("submit-btn");
   var statusEl = document.getElementById("status");
 
-  var pcaData = []; // 省-市-县数据
+  var pcaData = []; // 省-市数据
 
   function makeOption(value, text) {
     var o = document.createElement("option");
@@ -44,7 +44,7 @@
     }
   });
 
-  // ---------- 工作地点（省-市-县联动，无删除） ----------
+  // ---------- 工作地点（省-市联动，无删除） ----------
   function makeLocationRow(initialProvince) {
     var row = document.createElement("div");
     row.className = "location-row";
@@ -54,9 +54,6 @@
     var city = document.createElement("select");
     city.className = "loc-city";
     city.disabled = true;
-    var county = document.createElement("select");
-    county.className = "loc-county";
-    county.disabled = true;
 
     // 省：新增行加「请选择省」，首行默认「不限」
     if (initialProvince !== UNLIMITED) {
@@ -67,29 +64,22 @@
     prov.value = initialProvince || "";
 
     city.appendChild(makeOption("", "请选择市"));
-    county.appendChild(makeOption("", "请选择县区"));
 
     prov.addEventListener("change", function () { onProvinceChange(row); });
-    city.addEventListener("change", function () { onCityChange(row); });
 
     row.appendChild(prov);
     row.appendChild(city);
-    row.appendChild(county);
     return row;
   }
 
   function onProvinceChange(row) {
     var prov = row.querySelector(".loc-province");
     var city = row.querySelector(".loc-city");
-    var county = row.querySelector(".loc-county");
     city.innerHTML = "";
-    county.innerHTML = "";
 
     if (!prov.value || prov.value === UNLIMITED) {
       city.disabled = true;
-      county.disabled = true;
       city.appendChild(makeOption("", "请选择市"));
-      county.appendChild(makeOption("", "请选择县区"));
       syncLocationUI();
       return;
     }
@@ -98,27 +88,7 @@
     city.disabled = false;
     city.appendChild(makeOption("", "请选择市"));
     (p ? p.children : []).forEach(function (c) { city.appendChild(makeOption(c.name, c.name)); });
-    county.disabled = true;
-    county.appendChild(makeOption("", "请选择县区"));
     syncLocationUI();
-  }
-
-  function onCityChange(row) {
-    var prov = row.querySelector(".loc-province");
-    var city = row.querySelector(".loc-city");
-    var county = row.querySelector(".loc-county");
-    county.innerHTML = "";
-
-    var p = pcaData.find(function (x) { return x.name === prov.value; });
-    var c = p && p.children.find(function (y) { return y.name === city.value; });
-    if (c && c.children && c.children.length) {
-      county.disabled = false;
-      county.appendChild(makeOption("", "请选择县区"));
-      c.children.forEach(function (a) { county.appendChild(makeOption(a.name, a.name)); });
-    } else {
-      county.disabled = true;
-      county.appendChild(makeOption("", "请选择县区"));
-    }
   }
 
   function locationCount() { return locationList.querySelectorAll(".location-row").length; }
@@ -170,8 +140,7 @@
       if (prov === UNLIMITED) { out.push(UNLIMITED); return; }
       if (!prov) return;
       var city = row.querySelector(".loc-city").value;
-      var county = row.querySelector(".loc-county").value;
-      out.push([prov, city, county].filter(Boolean).join("-"));
+      out.push(city ? (prov + "-" + city) : prov);
     });
     return out;
   }
@@ -247,7 +216,6 @@
       refreshButtons();
     })
     .catch(function () {
-      // 数据加载失败时降级：仍渲染空表单
       titleList.appendChild(makeTitleRow("设计师"));
       titleList.appendChild(makeTitleRow("产品经理"));
       locationList.appendChild(makeLocationRow(UNLIMITED));
