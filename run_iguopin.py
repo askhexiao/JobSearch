@@ -35,7 +35,8 @@ def main() -> int:
 
     store = JobStore(args.db)
     new_count = sum(1 for job in jobs if store.upsert(job))
-    print(f"[DB] 新增 {new_count} 条，数据库共 {store.count()} 条")
+    expired = store.delete_expired()
+    print(f"[DB] 新增 {new_count} 条，清理过期 {expired} 条，数据库共 {store.count()} 条")
     print(f"[DB] 各数据源统计：{store.count_by_source()}")
     store.close()
 

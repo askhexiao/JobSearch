@@ -6,7 +6,7 @@ unique(source, job_id) upsert：同一来源的同一岗位重复抓取时只更
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from .models import Job, FIELD_NAMES
 
@@ -34,9 +34,9 @@ CREATE TABLE IF NOT EXISTS jobs (
     company_size      TEXT DEFAULT '',
     head_count        INTEGER DEFAULT 0,
     publish_date      TEXT DEFAULT '',
+    deadline          TEXT DEFAULT '',
     job_url           TEXT DEFAULT '',
     description       TEXT DEFAULT '',
-    raw               TEXT DEFAULT '',
     first_seen_at     TEXT DEFAULT '',
     last_seen_at      TEXT DEFAULT '',
     UNIQUE(source, job_id)
@@ -55,6 +55,7 @@ _NEW_COLUMNS = {
     "salary_max": "INTEGER DEFAULT 0",
     "education_level": "TEXT DEFAULT ''",
     "recruit_type": "TEXT DEFAULT ''",
+    "deadline": "TEXT DEFAULT ''",
 }
 
 
@@ -119,6 +120,15 @@ class JobStore:
             "SELECT source, COUNT(*) AS c FROM jobs GROUP BY source ORDER BY c DESC"
         ).fetchall()
         return {row["source"]: row["c"] for row in rows}
+
+    def delete_expired(self) -> int:
+        """删除已过截止日期的岗位，返回删除条数。"""
+        today = date.today().isoformat()
+        cur = self.conn.execute(
+            "DELETE FROM jobs WHERE deadline != '' AND deadline < ?", (today,)
+        )
+        self.conn.commit()
+        return cur.rowcount
 
     def close(self) -> None:
         self.conn.close()

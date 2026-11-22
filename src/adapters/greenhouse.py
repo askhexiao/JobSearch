@@ -110,7 +110,6 @@ class GreenhouseAdapter(BaseAdapter):
             publish_date=publish_date,
             job_url=item.get("absolute_url", ""),
             description=_clean_html(item.get("content") or ""),
-            raw=json.dumps(item, ensure_ascii=False),
         )
 
 

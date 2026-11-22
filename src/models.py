@@ -33,9 +33,9 @@ class Job:
     company_size: str = ""       # 公司规模
     head_count: int = 0          # 招聘人数
     publish_date: str = ""       # 发布日期 YYYY-MM-DD
+    deadline: str = ""           # 截止日期 YYYY-MM-DD（无则空）
     job_url: str = ""            # 回原官网投递链接
     description: str = ""        # 职位描述（纯文本）
-    raw: str = ""                # 原始 JSON 文本（调试/追溯用）
 
     def to_dict(self) -> dict:
         return {f.name: getattr(self, f.name) for f in fields(self)}

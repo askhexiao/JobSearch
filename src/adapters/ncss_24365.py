@@ -129,7 +129,6 @@ class NCSSAdapter(BaseAdapter):
             publish_date=publish_date,
             job_url=DETAIL_URL.format(job_id=job_id),
             description="",
-            raw=json.dumps(item, ensure_ascii=False),
         )
 
 

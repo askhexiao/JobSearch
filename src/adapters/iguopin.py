@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 
 from .base import BaseAdapter
 from ..locations import AREA_CODES, CITIES
@@ -78,6 +79,11 @@ class IguopinAdapter(BaseAdapter):
         education = item.get("education_cn") or ""
         ci = item.get("company_info") or {}
 
+        # 截止日期：已过期的岗位不收录（只留当前在招）
+        deadline = (item.get("end_time") or "")[:10]
+        if deadline and deadline < date.today().isoformat():
+            return None
+
         return Job(
             source=self.name,
             job_id=str(jid),
@@ -100,9 +106,9 @@ class IguopinAdapter(BaseAdapter):
             company_size=ci.get("scale_cn") or "",
             head_count=int(item.get("amount") or 0),
             publish_date=(item.get("start_time") or "")[:10],
+            deadline=deadline,
             job_url=DETAIL_URL.format(job_id=jid),
             description=(item.get("contents") or "").strip(),
-            raw=json.dumps(item, ensure_ascii=False),
         )
 
 
