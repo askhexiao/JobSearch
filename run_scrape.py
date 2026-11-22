@@ -2,8 +2,14 @@
 # -*- coding: utf-8 -*-
 """全量抓取三个数据源并入库（每日定时任务入口）。
 
+策略：
+  ① 24365 城市级基础抓取（无关键词，覆盖各城市近期岗位）
+  ② 24365 关键词×城市抓取（覆盖具体职位名，突破单城市 top-N 上限）
+  ③ 国聘网（央企/国企）
+  ④ Greenhouse 外企（中国大陆）
+
 用法:
-    python run_scrape.py        # 抓取 24365(全省) + 国聘 + Greenhouse 并入库
+    python run_scrape.py
 """
 from __future__ import annotations
 
@@ -19,28 +25,47 @@ from src.db import JobStore
 
 DB_PATH = Path(__file__).resolve().parent / "unifit100.db"
 
+# 常见职位关键词（用于 关键词×城市 抓取，覆盖主流职能）。
+KEYWORDS = [
+    "工程师", "设计师", "产品经理", "数据分析", "算法",
+    "前端", "后端", "测试", "运维", "开发",
+    "运营", "销售", "市场", "财务", "会计",
+    "人力", "行政", "客服", "采购", "教师",
+]
+
 
 def main() -> int:
     store = JobStore(DB_PATH)
     total_new = 0
+    ncss = NCSSAdapter()
 
-    print("[24365] 全量抓取（所有省级地区）")
-    ncss_jobs = NCSSAdapter().fetch_all()
-    total_new += sum(1 for j in ncss_jobs if store.upsert(j))
-    print(f"  -> 24365 共 {len(ncss_jobs)} 条\n")
+    # ① 城市级基础抓取
+    print("[24365] 城市级基础抓取（无关键词）")
+    for j in ncss.fetch_all():
+        if store.upsert(j):
+            total_new += 1
 
-    print("[iguopin] 抓取央企/国企岗位")
-    ig_jobs = IguopinAdapter().fetch()
-    total_new += sum(1 for j in ig_jobs if store.upsert(j))
-    print(f"  -> iguopin 共 {len(ig_jobs)} 条\n")
+    # ② 关键词 × 城市抓取
+    for idx, kw in enumerate(KEYWORDS, 1):
+        print(f"\n[24365] 关键词×城市 [{idx}/{len(KEYWORDS)}]: {kw}")
+        for j in ncss.fetch_all(keyword=kw):
+            if store.upsert(j):
+                total_new += 1
 
-    print("[greenhouse] 抓取外企中国大陆岗位")
-    gh_jobs = GreenhouseAdapter().fetch(china_only=True)
-    total_new += sum(1 for j in gh_jobs if store.upsert(j))
-    print(f"  -> greenhouse 共 {len(gh_jobs)} 条\n")
+    # ③ 国聘
+    print("\n[iguopin] 抓取央企/国企岗位")
+    for j in IguopinAdapter().fetch():
+        if store.upsert(j):
+            total_new += 1
+
+    # ④ Greenhouse
+    print("\n[greenhouse] 抓取外企中国大陆岗位")
+    for j in GreenhouseAdapter().fetch(china_only=True):
+        if store.upsert(j):
+            total_new += 1
 
     expired = store.delete_expired()
-    print(f"[DB] 新增 {total_new} 条，清理过期 {expired} 条，数据库共 {store.count()} 条")
+    print(f"\n[DB] 新增 {total_new} 条，清理过期 {expired} 条，数据库共 {store.count()} 条")
     print(f"[DB] 各数据源统计：{store.count_by_source()}")
     store.close()
     return 0
