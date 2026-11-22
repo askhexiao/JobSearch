@@ -26,9 +26,9 @@ def normalize_company_nature(raw: str) -> str:
         return "其他"
     if "外商" in r or "外资" in r or "外企" in r or "合资" in r or "港澳台" in r:
         return "外企"
-    if "国有" in r or "央企" in r or "国资" in r:
+    if "国有" in r or "国企" in r or "央企" in r or "中央" in r or "国资" in r:
         return "国企"
-    if "民营" in r or "私营" in r:
+    if "民营" in r or "私营" in r or "个体" in r:
         return "民企"
     if "机关" in r or "事业" in r or "非营利" in r or "非盈利" in r:
         return "事业单位"

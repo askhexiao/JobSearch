@@ -66,5 +66,28 @@ class BaseAdapter:
                 time.sleep(1.0 * (attempt + 1))
         raise FetchError(f"请求失败（已重试 {self.max_retries} 次）: {url} -> {last_err}")
 
+    def post_json(self, url: str, payload: dict, referer: str = None) -> dict:
+        """POST 一个 JSON 接口，带重试与指数退避。"""
+        headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "application/json, text/plain, */*",
+            "Content-Type": "application/json",
+        }
+        if referer:
+            headers["Referer"] = referer
+
+        last_err = None
+        for attempt in range(self.max_retries):
+            self._throttle()
+            try:
+                body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    return json.loads(resp.read().decode("utf-8", errors="replace"))
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+                last_err = exc
+                time.sleep(1.0 * (attempt + 1))
+        raise FetchError(f"请求失败（已重试 {self.max_retries} 次）: {url} -> {last_err}")
+
     def fetch(self):
         raise NotImplementedError

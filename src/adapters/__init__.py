@@ -3,6 +3,7 @@
 from .base import BaseAdapter, FetchError
 from .ncss_24365 import NCSSAdapter, AREA_CODES
 from .greenhouse import GreenhouseAdapter, BOARDS
+from .iguopin import IguopinAdapter
 
 __all__ = [
     "BaseAdapter",
@@ -11,4 +12,5 @@ __all__ = [
     "AREA_CODES",
     "GreenhouseAdapter",
     "BOARDS",
+    "IguopinAdapter",
 ]
