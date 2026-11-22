@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import argparse
+import html as html_lib
 import json
 import sys
 from pathlib import Path
@@ -65,7 +66,10 @@ def _sub_summary(sub) -> str:
 
 
 def render_email(sub, jobs, web_base_url: str) -> str:
+    """渲染 HTML 邮件（退订为可点击文字链接）。"""
     summary = _sub_summary(sub)
+    unsubscribe_url = f"{web_base_url}/unsubscribe?email={sub.email}"
+
     lines = [
         "UniFit100 | Job Search",
         "",
@@ -76,9 +80,7 @@ def render_email(sub, jobs, web_base_url: str) -> str:
         "——",
     ]
     for idx, j in enumerate(jobs[:MAX_JOBS_PER_EMAIL], 1):
-        title = j.title
-        if j.language == "英文":
-            title = f"{title}（英文）"
+        title = f"{j.title}（英文）" if j.language == "英文" else j.title
         lines.append(f"{idx}. {title}")
         lines.append(f"   {j.company} | {j.location} | {j.salary or '薪资面议'} | {j.publish_date}")
         lines.append(f"   投递 → {j.job_url}")
@@ -87,10 +89,16 @@ def render_email(sub, jobs, web_base_url: str) -> str:
         lines.append(f"（仅展示前 {MAX_JOBS_PER_EMAIL} 个，共 {len(jobs)} 个）")
         lines.append("")
     lines.append("——")
-    lines.append("UniFit100 | Job Search · 免费职位订阅工具")
-    lines.append(f"求职咨询 / 简历辅导：{CONSULT_URL}")
-    lines.append(f"退订：{web_base_url}/unsubscribe?email={sub.email}")
-    return "\n".join(lines)
+    lines.append("UniFit100 | Job Search · 免费的职位订阅工具")
+    lines.append(f"职业规划 / 面试辅导免费预约：{CONSULT_URL}")
+
+    body = "".join(html_lib.escape(line) + "<br>" for line in lines)
+    body += f'<a href="{unsubscribe_url}">退订</a>'
+    return (
+        '<html><body style="font-family:-apple-system,'
+        "'PingFang SC',sans-serif;font-size:14px;color:#1f2937;line-height:1.7\">"
+        + body + "</body></html>"
+    )
 
 
 def main() -> int:

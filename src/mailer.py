@@ -31,11 +31,11 @@ class Mailer:
     def configured(self) -> bool:
         return bool(self.username and self.password)
 
-    def send(self, to: str, subject: str, text_body: str) -> None:
+    def send(self, to: str, subject: str, html_body: str) -> None:
         if not self.configured:
             raise RuntimeError("SMTP 未配置（缺少 username/password）")
 
-        msg = MIMEText(text_body, "plain", "utf-8")
+        msg = MIMEText(html_body, "html", "utf-8")
         msg["Subject"] = Header(subject, "utf-8")
         msg["From"] = formataddr((str(Header(self.from_name, "utf-8")), self.from_addr))
         msg["To"] = to
