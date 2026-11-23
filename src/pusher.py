@@ -109,9 +109,7 @@ def push_subscription(sub, pool, mailer, sub_store, web_base_url: str, dry_run: 
 
     subject = f"职位订阅更新 - 新岗位 {len(new_jobs)} 个 | UniFit100"
     body = render_email(sub, new_jobs, web_base_url)
-    if dry_run:
-        print(f"[dry-run] {sub.email}：{len(new_jobs)} 个新岗位（未发送）")
-    else:
+    if not dry_run:
         mailer.send(sub.email, subject, body)
         for j in new_jobs:
             sub_store.mark_sent(sub.email, job_key(j))
