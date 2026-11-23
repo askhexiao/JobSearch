@@ -219,6 +219,9 @@
       setStatus("请先同意隐私说明", false); return;
     }
     if (!email) { setStatus("请输入邮箱", false); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setStatus("请输入正确的邮箱格式", false); return;
+    }
     if (titles.length === 0 && locations.length === 0) {
       setStatus("请至少填写一个职位名称或工作地点", false); return;
     }
