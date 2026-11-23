@@ -104,6 +104,7 @@ def render_email(sub, jobs, web_base_url: str) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="按订阅匹配库内岗位并邮件推送")
     parser.add_argument("--dry-run", action="store_true", help="只打印，不发送")
+    parser.add_argument("--frequency", choices=["每天1次", "每周1次", "all"], default="all", help="只推送指定频率的订阅（默认 all）")
     parser.add_argument("--db", default=str(DB_PATH), help="SQLite 数据库路径")
     args = parser.parse_args()
 
@@ -121,11 +122,13 @@ def main() -> int:
 
     sub_store = SubscriptionStore(args.db)
     subs = sub_store.all()
+    if args.frequency != "all":
+        subs = [s for s in subs if s.frequency == args.frequency]
     if not subs:
-        print("暂无订阅。请通过前端订阅页（python web_server.py）添加订阅。")
+        print("暂无订阅（或该频率下无订阅）。请通过前端订阅页（python web_server.py）添加订阅。")
         sub_store.close()
         return 0
-    print(f"共 {len(subs)} 个订阅\n")
+    print(f"共 {len(subs)} 个订阅（频率={args.frequency}）\n")
 
     # 读库：三数据源（24365 + 国聘 + Greenhouse）全量岗位。
     job_store = JobStore(args.db)
@@ -155,7 +158,7 @@ def main() -> int:
             print(f"[跳过] {sub.email}：无新岗位")
             continue
 
-        subject = f"【UniFit100】新岗位 {len(new_jobs)} 个"
+        subject = f"职位订阅更新 - 新岗位 {len(new_jobs)} 个 | UniFit100"
         body = render_email(sub, new_jobs, web_base_url)
         if dry_run:
             print(f"[dry-run] {sub.email}：{len(new_jobs)} 个新岗位（未发送）")

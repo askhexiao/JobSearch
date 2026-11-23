@@ -81,7 +81,15 @@ cp config.example.json config.json # 填 SMTP 凭证
 python run_push.py                 # ③ 真实发送
 ```
 
-建议用 `cron` / GitHub Actions 定时执行 `run_push.py`。
+建议用 `cron` / GitHub Actions 定时执行。**推送时间**：每天 10:00 推「每天1次」订阅，每周三 10:00 推「每周1次」订阅，用 `--frequency` 过滤：
+
+```bash
+# 每天 10:00 推送「每天1次」订阅
+0 10 * * * cd /path/to/unifit100 && python3 run_push.py --frequency 每天1次
+
+# 每周三 10:00 推送「每周1次」订阅
+0 10 * * 3 cd /path/to/unifit100 && python3 run_push.py --frequency 每周1次
+```
 
 ### 阿里云 DirectMail 配置
 
