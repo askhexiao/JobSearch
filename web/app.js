@@ -244,6 +244,7 @@
         employer_db: employerDb,
         frequency: frequency,
         publish_within: publishWithin,
+        mode: isManage ? "update" : "subscribe",
       }),
     })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })

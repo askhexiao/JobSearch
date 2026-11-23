@@ -197,25 +197,30 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         store = SubscriptionStore(DB_PATH)
+        mode = (payload.get("mode") or "subscribe").strip()
+
+        # 首次订阅时，若邮箱已订阅（且活跃）则拦截，避免重复订阅
+        existing = store.get(sub.email)
+        if mode != "update" and existing is not None and not existing.unsubscribed_at:
+            store.close()
+            self._send_json({"ok": True, "message": "检测到您的邮箱已订阅，无需重复操作哦"})
+            return
+
         store.upsert(sub)
 
         # 即时推送首封（已配置 SMTP 时）
-        count = 0
         try:
             config = _load_config()
             mailer = Mailer(config)
             if mailer.configured:
                 pool = JobStore(DB_PATH).all_jobs()
                 base = (config or {}).get("web_base_url", "http://127.0.0.1:8000")
-                count = push_subscription(sub, pool, mailer, store, base, dry_run=False)
+                push_subscription(sub, pool, mailer, store, base, dry_run=False)
         except Exception as exc:
             sys.stderr.write(f"[web] 即时推送失败：{exc}\n")
 
         store.close()
-        if count:
-            message = f"订阅成功！已为你即时推送 {count} 个岗位。"
-        else:
-            message = "订阅成功！当前暂无匹配岗位，有新岗位会邮件推送给你。"
+        message = "订阅信息已更新！" if mode == "update" else "订阅成功！即将为您推送职位"
         self._send_json({"ok": True, "message": message})
 
     def log_message(self, fmt, *args):  # 精简日志
