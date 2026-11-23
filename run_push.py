@@ -15,6 +15,7 @@ import argparse
 import html as html_lib
 import json
 import sys
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -28,6 +29,7 @@ DB_PATH = ROOT / "unifit100.db"
 CONFIG_PATH = ROOT / "config.json"
 CONSULT_URL = "https://unifit100.com/consultant"
 MAX_JOBS_PER_EMAIL = 20
+RECENT_DAYS = 7  # 发布时间在最近 N 天内标记为「新」
 
 
 def load_config() -> dict | None:
@@ -81,6 +83,8 @@ def render_email(sub, jobs, web_base_url: str) -> str:
     ]
     for idx, j in enumerate(jobs[:MAX_JOBS_PER_EMAIL], 1):
         title = f"{j.title}（英文）" if j.language == "英文" else j.title
+        if j.publish_date and j.publish_date >= (date.today() - timedelta(days=RECENT_DAYS)).isoformat():
+            title = f"{title}【新】"
         lines.append(f"{idx}. {title}")
         lines.append(f"   {j.company} | {j.location} | {j.salary or '薪资面议'} | {j.publish_date}")
         lines.append(f"   投递 → {j.job_url}")
@@ -153,6 +157,8 @@ def main() -> int:
             seen_keys.add(k)
             deduped.append(j)
         new_jobs = [j for j in deduped if not sub_store.is_sent(sub.email, job_key(j))]
+        # 最新发布的岗位置顶
+        new_jobs.sort(key=lambda j: j.publish_date or "", reverse=True)
 
         if not new_jobs:
             print(f"[跳过] {sub.email}：无新岗位")
