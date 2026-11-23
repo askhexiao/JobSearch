@@ -17,12 +17,16 @@ from urllib.parse import parse_qs, urlparse
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
+from src.db import JobStore
 from src.locations import LOCATION_CHOICES
+from src.mailer import Mailer
+from src.pusher import push_subscription
 from src.subscription import SubscriptionStore, validate_subscription
 
 WEB_DIR = ROOT / "web"
 BRAND_DIR = ROOT / "brand"
 DB_PATH = ROOT / "unifit100.db"
+CONFIG_PATH = ROOT / "config.json"
 
 _MIME = {
     ".html": "text/html; charset=utf-8",
@@ -33,6 +37,16 @@ _MIME = {
     ".ico": "image/x-icon",
     ".svg": "image/svg+xml",
 }
+
+
+def _load_config() -> dict | None:
+    if not CONFIG_PATH.exists():
+        return None
+    try:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -57,6 +71,30 @@ class Handler(BaseHTTPRequestHandler):
             return
         ctype = _MIME.get(path.suffix.lower(), "application/octet-stream")
         self._send(200, path.read_bytes(), ctype)
+
+    def _handle_get_subscription(self) -> None:
+        query = parse_qs(urlparse(self.path).query)
+        email = (query.get("email") or [""])[0].strip().lower()
+        if not email:
+            self._send_json({"error": "缺少 email 参数"}, 400)
+            return
+        store = SubscriptionStore(DB_PATH)
+        sub = store.get(email)
+        store.close()
+        if sub is None:
+            self._send_json({"error": "未找到该订阅"}, 404)
+            return
+        self._send_json({
+            "email": sub.email,
+            "titles": sub.titles,
+            "locations": sub.locations,
+            "location_unlimited": sub.location_unlimited,
+            "recruit_type": sub.recruit_type,
+            "employer_db": sub.employer_db,
+            "frequency": sub.frequency,
+            "publish_within": sub.publish_within,
+            "unsubscribed_at": sub.unsubscribed_at,
+        })
 
     def _handle_unsubscribe(self) -> None:
         """退订：软删除（标记退订时间），保留订阅记录与已发送历史。"""
@@ -91,12 +129,14 @@ class Handler(BaseHTTPRequestHandler):
     # ---------- GET ----------
     def do_GET(self) -> None:
         path = urlparse(self.path).path
-        if path in ("/", "/index.html"):
+        if path in ("/", "/index.html", "/manage"):
             self._send_file(WEB_DIR / "index.html")
         elif path == "/logo.png":
             self._send_file(BRAND_DIR / "logo.png")
         elif path == "/api/locations":
             self._send_json({"locations": LOCATION_CHOICES})
+        elif path == "/api/subscription":
+            self._handle_get_subscription()
         elif path == "/unsubscribe":
             self._handle_unsubscribe()
         elif path.startswith("/static/"):
@@ -130,8 +170,25 @@ class Handler(BaseHTTPRequestHandler):
 
         store = SubscriptionStore(DB_PATH)
         store.upsert(sub)
+
+        # 即时推送首封（已配置 SMTP 时）
+        count = 0
+        try:
+            config = _load_config()
+            mailer = Mailer(config)
+            if mailer.configured:
+                pool = JobStore(DB_PATH).all_jobs()
+                base = (config or {}).get("web_base_url", "http://127.0.0.1:8000")
+                count = push_subscription(sub, pool, mailer, store, base, dry_run=False)
+        except Exception as exc:
+            sys.stderr.write(f"[web] 即时推送失败：{exc}\n")
+
         store.close()
-        self._send_json({"ok": True, "message": "订阅成功！新岗位将邮件推送给你。"})
+        if count:
+            message = f"订阅成功！已为你即时推送 {count} 个岗位。"
+        else:
+            message = "订阅成功！当前暂无匹配岗位，有新岗位会邮件推送给你。"
+        self._send_json({"ok": True, "message": message})
 
     def log_message(self, fmt, *args):  # 精简日志
         sys.stderr.write("[web] %s\n" % (fmt % args))

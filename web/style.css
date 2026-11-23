@@ -120,6 +120,21 @@ input:focus, select:focus { border-color: var(--accent); }
 .submit-btn:hover { background: var(--brand-dark); }
 .submit-btn:disabled { opacity: .6; cursor: not-allowed; }
 
+.unsub-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 11px;
+  border: 1px solid var(--danger);
+  border-radius: 4px;
+  background: #fff;
+  color: var(--danger);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+.unsub-btn:hover { background: #fff2ef; }
+
 .status { min-height: 22px; margin: 12px 0 0; font-size: 14px; text-align: center; }
 .status.ok { color: var(--brand-dark); }
 .status.err { color: var(--danger); }

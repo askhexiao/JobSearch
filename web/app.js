@@ -12,7 +12,11 @@
   var addLocation = document.getElementById("add-location");
   var form = document.getElementById("subscribe-form");
   var submitBtn = document.getElementById("submit-btn");
+  var unsubBtn = document.getElementById("unsub-btn");
   var statusEl = document.getElementById("status");
+
+  var isManage = location.pathname.indexOf("/manage") === 0;
+  var manageEmail = new URLSearchParams(location.search).get("email") || "";
 
   var pcaData = []; // 省-市数据
 
@@ -118,6 +122,60 @@
     }
   });
 
+  // ---------- 管理模式：预填 + 退订 ----------
+  function fillLocation(path) {
+    if (!path || path === UNLIMITED) {
+      locationList.appendChild(makeLocationRow(UNLIMITED));
+      return;
+    }
+    var parts = path.split("-");
+    var prov = parts[0] || "";
+    var city = parts[1] || "";
+    var row = makeLocationRow(prov);
+    onProvinceChange(row);
+    if (city) {
+      row.querySelector(".loc-city").value = city;
+    }
+    locationList.appendChild(row);
+  }
+
+  function loadSubscription(email) {
+    fetch("/api/subscription?email=" + encodeURIComponent(email))
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { setStatus("未找到该订阅", false); return; }
+        document.getElementById("email").value = d.email;
+        titleList.innerHTML = "";
+        (d.titles && d.titles.length ? d.titles : [""]).forEach(function (t) {
+          titleList.appendChild(makeTitleRow(t));
+        });
+        locationList.innerHTML = "";
+        if (d.location_unlimited) {
+          locationList.appendChild(makeLocationRow(UNLIMITED));
+        } else if (d.locations && d.locations.length) {
+          d.locations.forEach(fillLocation);
+        } else {
+          locationList.appendChild(makeLocationRow(UNLIMITED));
+        }
+        document.getElementById("recruit-type").value = d.recruit_type || "校招";
+        document.getElementById("employer-db").value = d.employer_db || "";
+        document.getElementById("frequency").value = d.frequency || "每周1次";
+        document.getElementById("publish-within").value = d.publish_within || "最近1个月";
+        submitBtn.textContent = "保存修改";
+        unsubBtn.hidden = false;
+        unsubBtn.setAttribute("data-email", d.email);
+        refreshButtons();
+      })
+      .catch(function () { setStatus("加载订阅失败", false); });
+  }
+
+  unsubBtn.addEventListener("click", function () {
+    var email = unsubBtn.getAttribute("data-email") || manageEmail;
+    if (!email) { return; }
+    if (!confirm("确定退订？退订后将不再收到职位推送。")) { return; }
+    location.href = "/unsubscribe?email=" + encodeURIComponent(email);
+  });
+
   // ---------- 表单提交 ----------
   function setStatus(msg, ok) {
     statusEl.textContent = msg;
@@ -183,7 +241,7 @@
       .then(function (res) {
         if (res.ok && res.data.ok) {
           setStatus("✅ " + (res.data.message || "订阅成功！"), true);
-          resetForm();
+          if (!isManage) { resetForm(); }
         } else {
           setStatus((res.data && res.data.error) || "提交失败，请稍后再试", false);
         }
@@ -191,7 +249,7 @@
       .catch(function () { setStatus("网络错误，请稍后再试", false); })
       .finally(function () {
         submitBtn.disabled = false;
-        submitBtn.textContent = "立即订阅";
+        submitBtn.textContent = isManage ? "保存修改" : "立即订阅";
       });
   });
 
@@ -206,19 +264,22 @@
   }
 
   // ---------- 初始化（先加载省市区数据） ----------
+  function defaultInit() {
+    titleList.appendChild(makeTitleRow("设计师"));
+    titleList.appendChild(makeTitleRow("产品经理"));
+    locationList.appendChild(makeLocationRow(UNLIMITED));
+    refreshButtons();
+  }
+
   fetch("/static/pca.json")
     .then(function (r) { return r.json(); })
     .then(function (data) {
       pcaData = data || [];
-      titleList.appendChild(makeTitleRow("设计师"));
-      titleList.appendChild(makeTitleRow("产品经理"));
-      locationList.appendChild(makeLocationRow(UNLIMITED));
-      refreshButtons();
+      if (isManage && manageEmail) { loadSubscription(manageEmail); }
+      else { defaultInit(); }
     })
     .catch(function () {
-      titleList.appendChild(makeTitleRow("设计师"));
-      titleList.appendChild(makeTitleRow("产品经理"));
-      locationList.appendChild(makeLocationRow(UNLIMITED));
-      refreshButtons();
+      if (isManage && manageEmail) { loadSubscription(manageEmail); }
+      else { defaultInit(); }
     });
 })();
