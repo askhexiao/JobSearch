@@ -52,6 +52,25 @@ def _load_config() -> dict | None:
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "UniFit100/1.0"
+    BASE_PATH = ""  # 部署子路径（如 "/jobs"）；本地开发为空
+
+    def _rel(self, path: str) -> str | None:
+        """去掉 base 前缀；不在 base 下返回 None。"""
+        if not self.BASE_PATH:
+            return path
+        if path == self.BASE_PATH:
+            return "/"
+        if path.startswith(self.BASE_PATH + "/"):
+            return path[len(self.BASE_PATH):]
+        return None
+
+    def _home(self) -> str:
+        return (self.BASE_PATH + "/") if self.BASE_PATH else "/"
+
+    def _serve_index(self) -> None:
+        html = (WEB_DIR / "index.html").read_text(encoding="utf-8")
+        html = html.replace("__BASE_HREF__", self._home())
+        self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
 
     # ---------- 响应工具 ----------
     def _send(self, status: int, body: bytes, ctype: str) -> None:
@@ -114,6 +133,7 @@ class Handler(BaseHTTPRequestHandler):
             store.unsubscribe(email)
             msg = "已退订，将不再收到推送。"
         store.close()
+        home = self._home()
         html = (
             "<!DOCTYPE html><html lang='zh-CN'><head><meta charset='utf-8'>"
             "<meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -122,16 +142,19 @@ class Handler(BaseHTTPRequestHandler):
             "margin:60px auto;text-align:center;color:#1f2937'>"
             "<h2 style='color:#1a3c6e'>UniFit100 | Job Search</h2>"
             f"<p>{msg}</p>"
-            "<p><a href='/' style='color:#2f6fb0'>返回订阅页</a></p>"
+            f"<p><a href='{home}' style='color:#2f6fb0'>返回订阅页</a></p>"
             "</body></html>"
         )
         self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
 
     # ---------- GET ----------
     def do_GET(self) -> None:
-        path = urlparse(self.path).path
+        path = self._rel(urlparse(self.path).path)
+        if path is None:
+            self._send_json({"error": "not found"}, 404)
+            return
         if path in ("/", "/index.html", "/manage"):
-            self._send_file(WEB_DIR / "index.html")
+            self._serve_index()
         elif path == "/logo.png":
             self._send_file(BRAND_DIR / "logo.png")
         elif path == "/api/locations":
@@ -153,7 +176,10 @@ class Handler(BaseHTTPRequestHandler):
 
     # ---------- POST ----------
     def do_POST(self) -> None:
-        path = urlparse(self.path).path
+        path = self._rel(urlparse(self.path).path)
+        if path is None:
+            self._send_json({"error": "not found"}, 404)
+            return
         if path != "/api/subscribe":
             self._send_json({"error": "not found"}, 404)
             return
@@ -199,10 +225,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="UniFit100 订阅页服务")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument("--base-path", default="", help="部署子路径，如 /jobs")
     args = parser.parse_args()
 
+    base = args.base_path.strip()
+    if base and not base.startswith("/"):
+        base = "/" + base
+    base = base.rstrip("/")
+    Handler.BASE_PATH = base
+
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"UniFit100 订阅页已启动：http://{args.host}:{args.port}")
+    url = f"http://{args.host}:{args.port}{base}"
+    print(f"UniFit100 订阅页已启动：{url}")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

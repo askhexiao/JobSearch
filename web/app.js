@@ -16,7 +16,7 @@
   var unsubLink = document.getElementById("unsub-link");
   var statusEl = document.getElementById("status");
 
-  var isManage = location.pathname.indexOf("/manage") === 0;
+  var isManage = location.pathname.indexOf("/manage") !== -1;
   var manageEmail = new URLSearchParams(location.search).get("email") || "";
 
   var pcaData = []; // 省-市数据
@@ -143,7 +143,7 @@
   }
 
   function loadSubscription(email) {
-    fetch("/api/subscription?email=" + encodeURIComponent(email))
+    fetch("api/subscription?email=" + encodeURIComponent(email))
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.error) { setStatus("未找到该订阅", false); return; }
@@ -179,7 +179,7 @@
     var email = unsubLink.getAttribute("data-email") || manageEmail;
     if (!email) { return; }
     if (!confirm("确定退订？退订后将不再收到职位推送。")) { return; }
-    location.href = "/unsubscribe?email=" + encodeURIComponent(email);
+    location.href = "unsubscribe?email=" + encodeURIComponent(email);
   });
 
   // ---------- 表单提交 ----------
@@ -233,7 +233,7 @@
     submitBtn.disabled = true;
     submitBtn.textContent = "提交中…";
 
-    fetch("/api/subscribe", {
+    fetch("api/subscribe", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -280,7 +280,7 @@
     refreshButtons();
   }
 
-  fetch("/static/pca.json")
+  fetch("static/pca.json")
     .then(function (r) { return r.json(); })
     .then(function (data) {
       pcaData = data || [];
