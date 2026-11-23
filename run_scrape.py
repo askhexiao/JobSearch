@@ -35,6 +35,11 @@ KEYWORDS = [
 
 
 def main() -> int:
+    import argparse
+    parser = argparse.ArgumentParser(description="全量抓取三个数据源并入库")
+    parser.add_argument("--light", action="store_true", help="轻量模式：跳过关键词×城市抓取（适合每日定时）")
+    args = parser.parse_args()
+
     store = JobStore(DB_PATH)
     total_new = 0
     ncss = NCSSAdapter()
@@ -45,12 +50,13 @@ def main() -> int:
         if store.upsert(j):
             total_new += 1
 
-    # ② 关键词 × 城市抓取
-    for idx, kw in enumerate(KEYWORDS, 1):
-        print(f"\n[24365] 关键词×城市 [{idx}/{len(KEYWORDS)}]: {kw}")
-        for j in ncss.fetch_all(keyword=kw):
-            if store.upsert(j):
-                total_new += 1
+    # ② 关键词 × 城市抓取（轻量模式跳过）
+    if not args.light:
+        for idx, kw in enumerate(KEYWORDS, 1):
+            print(f"\n[24365] 关键词×城市 [{idx}/{len(KEYWORDS)}]: {kw}")
+            for j in ncss.fetch_all(keyword=kw):
+                if store.upsert(j):
+                    total_new += 1
 
     # ③ 国聘
     print("\n[iguopin] 抓取央企/国企岗位")
