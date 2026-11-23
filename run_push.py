@@ -87,10 +87,11 @@ def render_email(sub, jobs, web_base_url: str) -> str:
             title = f"{title} [新]"
         lines.append(f"{idx}. {title}")
 
-        meta = f"{j.company} | {j.location} | {j.salary or '薪资面议'}"
+        parts = [j.company, j.location, j.salary]
         if j.language == "英文":
-            meta += " | 英文招聘"
-        meta += f" | {j.publish_date}"
+            parts.append("英文招聘")
+        parts.append(j.publish_date)
+        meta = " | ".join(p for p in parts if p)
         lines.append(meta)
 
         lines.append(f"投递 → {j.job_url}")
