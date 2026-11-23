@@ -12,7 +12,7 @@
   var addLocation = document.getElementById("add-location");
   var form = document.getElementById("subscribe-form");
   var submitBtn = document.getElementById("submit-btn");
-  var unsubBtn = document.getElementById("unsub-btn");
+  var unsubLink = document.getElementById("unsub-link");
   var statusEl = document.getElementById("status");
 
   var isManage = location.pathname.indexOf("/manage") === 0;
@@ -163,16 +163,17 @@
         document.getElementById("employer-db").value = d.employer_db || "";
         document.getElementById("frequency").value = d.frequency || "每周1次";
         document.getElementById("publish-within").value = d.publish_within || "最近1个月";
-        submitBtn.textContent = "保存修改";
-        unsubBtn.hidden = false;
-        unsubBtn.setAttribute("data-email", d.email);
+        submitBtn.textContent = "更新订阅";
+        unsubLink.hidden = false;
+        unsubLink.setAttribute("data-email", d.email);
         refreshButtons();
       })
       .catch(function () { setStatus("加载订阅失败", false); });
   }
 
-  unsubBtn.addEventListener("click", function () {
-    var email = unsubBtn.getAttribute("data-email") || manageEmail;
+  unsubLink.addEventListener("click", function (e) {
+    e.preventDefault();
+    var email = unsubLink.getAttribute("data-email") || manageEmail;
     if (!email) { return; }
     if (!confirm("确定退订？退订后将不再收到职位推送。")) { return; }
     location.href = "/unsubscribe?email=" + encodeURIComponent(email);
@@ -254,7 +255,7 @@
       .catch(function () { setStatus("网络错误，请稍后再试", false); })
       .finally(function () {
         submitBtn.disabled = false;
-        submitBtn.textContent = isManage ? "保存修改" : "立即订阅";
+        submitBtn.textContent = isManage ? "更新订阅" : "立即订阅";
       });
   });
 

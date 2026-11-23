@@ -42,7 +42,7 @@ body {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 14px;
-  padding: 28px 24px;
+  padding: 28px 24px 16px;
   box-shadow: 0 10px 45px rgba(37, 77, 46, 0.05);
 }
 
@@ -116,7 +116,7 @@ select {
 
 .check-line { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; cursor: pointer; }
 .check-line input { width: 16px; height: 16px; }
-.consent { align-items: flex-start; margin: 4px 0 16px; }
+.consent { align-items: flex-start; margin: 4px 0 30px; }
 .consent span { font-weight: 400; font-size: 13px; color: var(--muted); }
 
 #location-block.disabled { opacity: .5; pointer-events: none; }
@@ -141,28 +141,12 @@ select {
 .submit-btn:hover { background: var(--btn-hover); }
 .submit-btn:disabled { opacity: .6; cursor: not-allowed; }
 
-.unsub-btn {
-  width: 300px;
-  max-width: 100%;
-  display: block;
-  margin: 8px auto 0;
-  padding: 11px;
-  border: 1px solid var(--danger);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--danger);
-  font-size: 15px;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-}
-.unsub-btn:hover { background: #fff2ef; }
-
 .status { min-height: 22px; margin: 12px 0 0; font-size: 14px; text-align: center; }
 .status.ok { color: var(--brand-dark); }
 .status.err { color: var(--danger); }
 
 .footer { text-align: center; margin-top: 24px; color: var(--muted); font-size: 13px; }
 .footer p:last-child { font-weight: 700; }
+.footer .red { color: var(--danger); }
 .footer a { color: var(--brand-dark); text-decoration: none; }
 .footer a:hover { text-decoration: underline; }
