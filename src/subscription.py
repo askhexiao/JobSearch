@@ -8,7 +8,7 @@
 - 工作地点（≤5，「不限」表示不限地点）
 - 意向雇主（优质雇主数据库）
 - 推送频率：每周 1 次 / 每天 1 次
-- 职位发布时长：最近 1 周 / 2 周 / 1 个月 / 3 个月 / 不限
+- 职位发布时长：最近 1 周 / 1 个月 / 3 个月 / 6 个月
 """
 from __future__ import annotations
 
@@ -28,14 +28,14 @@ RECRUIT_TYPES = ["校招", "社招"]
 FREQUENCIES = ["每周1次", "每天1次"]
 DEFAULT_EMPLOYER_DB = "UniFit100 优质雇主数据库 - 2027"
 
-# 职位发布时长：选项 -> 天数（None 表示不限）。
+# 职位发布时长：选项 -> 天数。
 PUBLISH_WITHIN_OPTIONS = {
     "最近1周": 7,
     "最近1个月": 30,
     "最近3个月": 90,
-    "不限": None,
+    "最近6个月": 180,
 }
-DEFAULT_PUBLISH_WITHIN = "最近1个月"
+DEFAULT_PUBLISH_WITHIN = "最近3个月"
 
 # 校招判定（优先用标准化 recruit_type，旧数据回退标题启发式）。
 
@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     recruit_type       TEXT DEFAULT '校招',
     employer_db        TEXT DEFAULT '',
     frequency          TEXT DEFAULT '每周1次',
-    publish_within     TEXT DEFAULT '最近1个月',
+    publish_within     TEXT DEFAULT '最近3个月',
     created_at         TEXT DEFAULT '',
     updated_at         TEXT DEFAULT '',
     unsubscribed_at    TEXT DEFAULT ''
@@ -66,7 +66,7 @@ _NEW_COLUMNS = {
     "recruit_type": "TEXT DEFAULT '校招'",
     "employer_db": "TEXT DEFAULT ''",
     "frequency": "TEXT DEFAULT '每周1次'",
-    "publish_within": "TEXT DEFAULT '最近1个月'",
+    "publish_within": "TEXT DEFAULT '最近3个月'",
     "unsubscribed_at": "TEXT DEFAULT ''",
 }
 

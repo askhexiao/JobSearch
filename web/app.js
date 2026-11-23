@@ -165,7 +165,7 @@
         if (rb) { rb.checked = true; }
         document.getElementById("employer-db").value = d.employer_db || "";
         document.getElementById("frequency").value = d.frequency || "每周1次";
-        document.getElementById("publish-within").value = d.publish_within || "最近1个月";
+        document.getElementById("publish-within").value = d.publish_within || "最近3个月";
         submitBtn.textContent = "更新订阅";
         unsubWrap.hidden = false;
         unsubLink.setAttribute("data-email", d.email);
