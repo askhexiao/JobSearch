@@ -8,7 +8,7 @@
 - 工作地点（≤5，「不限」表示不限地点）
 - 意向雇主（优质雇主数据库）
 - 推送频率：每周 1 次 / 每天 1 次
-- 岗位发布时长：最近 1 周 / 2 周 / 1 个月 / 3 个月 / 不限
+- 职位发布时长：最近 1 周 / 2 周 / 1 个月 / 3 个月 / 不限
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ RECRUIT_TYPES = ["校招", "社招"]
 FREQUENCIES = ["每周1次", "每天1次"]
 DEFAULT_EMPLOYER_DB = "UniFit100 优质雇主数据库 - 2027"
 
-# 岗位发布时长：选项 -> 天数（None 表示不限）。
+# 职位发布时长：选项 -> 天数（None 表示不限）。
 PUBLISH_WITHIN_OPTIONS = {
     "最近1周": 7,
     "最近1个月": 30,
@@ -80,7 +80,7 @@ class Subscription:
     recruit_type: str = "校招"                          # 校招 / 社招
     employer_db: str = DEFAULT_EMPLOYER_DB
     frequency: str = "每周1次"                           # 每周1次 / 每天1次
-    publish_within: str = DEFAULT_PUBLISH_WITHIN         # 岗位发布时长
+    publish_within: str = DEFAULT_PUBLISH_WITHIN         # 职位发布时长
     created_at: str = ""
     updated_at: str = ""
     unsubscribed_at: str = ""                             # 退订时间（空=活跃）
@@ -130,7 +130,7 @@ def validate_subscription(payload: dict) -> tuple:
         return None, "请选择推送频率"
 
     if publish_within not in PUBLISH_WITHIN_OPTIONS:
-        return None, "请选择岗位发布时长"
+        return None, "请选择职位发布时长"
 
     location_unlimited = UNLIMITED in locations
     if location_unlimited:
