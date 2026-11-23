@@ -26,7 +26,7 @@ MAX_LOCATIONS = 5
 UNLIMITED = "不限"
 RECRUIT_TYPES = ["校招", "社招"]
 FREQUENCIES = ["每周1次", "每天1次"]
-DEFAULT_EMPLOYER_DB = "UniFit100优质雇主数据库 - 2027"
+DEFAULT_EMPLOYER_DB = "UniFit100 优质雇主数据库 - 2027"
 
 # 岗位发布时长：选项 -> 天数（None 表示不限）。
 PUBLISH_WITHIN_OPTIONS = {
