@@ -58,6 +58,7 @@
     var city = document.createElement("select");
     city.className = "loc-city";
     city.disabled = true;
+    city.style.display = "none";
 
     // 省：新增行加「请选择省」，首行默认「不限」
     if (initialProvince !== UNLIMITED) {
@@ -83,12 +84,13 @@
 
     if (!prov.value || prov.value === UNLIMITED) {
       city.disabled = true;
-      city.appendChild(makeOption("", "请选择市"));
+      city.style.display = "none";
       syncLocationUI();
       return;
     }
 
     var p = pcaData.find(function (x) { return x.name === prov.value; });
+    city.style.display = "";
     city.disabled = false;
     city.appendChild(makeOption("", "请选择市"));
     (p ? p.children : []).forEach(function (c) { city.appendChild(makeOption(c.name, c.name)); });

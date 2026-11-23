@@ -36,6 +36,7 @@ _MIME = {
     ".png": "image/png",
     ".ico": "image/x-icon",
     ".svg": "image/svg+xml",
+    ".ttf": "font/ttf",
 }
 
 
