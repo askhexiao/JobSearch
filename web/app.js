@@ -12,6 +12,7 @@
   var addLocation = document.getElementById("add-location");
   var form = document.getElementById("subscribe-form");
   var submitBtn = document.getElementById("submit-btn");
+  var unsubWrap = document.getElementById("unsub-wrap");
   var unsubLink = document.getElementById("unsub-link");
   var statusEl = document.getElementById("status");
 
@@ -166,7 +167,7 @@
         document.getElementById("frequency").value = d.frequency || "每周1次";
         document.getElementById("publish-within").value = d.publish_within || "最近1个月";
         submitBtn.textContent = "更新订阅";
-        unsubLink.hidden = false;
+        unsubWrap.hidden = false;
         unsubLink.setAttribute("data-email", d.email);
         refreshButtons();
       })
