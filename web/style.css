@@ -1,6 +1,6 @@
 @font-face {
   font-family: "FrankSong";
-  src: url("fangsong.ttf") format("truetype");
+  src: url("fangsong.woff2") format("woff2");
   font-display: swap;
 }
 
