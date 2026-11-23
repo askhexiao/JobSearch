@@ -159,7 +159,9 @@
         } else {
           locationList.appendChild(makeLocationRow(UNLIMITED));
         }
-        document.getElementById("recruit-type").value = d.recruit_type || "校招";
+        var rt = d.recruit_type || "社招";
+        var rb = document.querySelector('input[name="recruit_type"][value="' + rt + '"]');
+        if (rb) { rb.checked = true; }
         document.getElementById("employer-db").value = d.employer_db || "";
         document.getElementById("frequency").value = d.frequency || "每周1次";
         document.getElementById("publish-within").value = d.publish_within || "最近1个月";
@@ -211,7 +213,7 @@
     var email = document.getElementById("email").value.trim();
     var titles = collectTitles();
     var locations = collectLocations();
-    var recruitType = document.getElementById("recruit-type").value;
+    var recruitType = document.querySelector('input[name="recruit_type"]:checked').value;
     var employerDb = document.getElementById("employer-db").value;
     var frequency = document.getElementById("frequency").value;
     var publishWithin = document.getElementById("publish-within").value;

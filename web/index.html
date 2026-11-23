@@ -26,11 +26,15 @@
 
         <!-- 招聘类型 -->
         <div class="field">
-          <label for="recruit-type">招聘类型 <span class="req">*</span></label>
-          <select id="recruit-type" name="recruit_type">
-            <option value="校招" selected>校招</option>
-            <option value="社招">社招</option>
-          </select>
+          <label>招聘类型 <span class="req">*</span></label>
+          <div class="radio-group">
+            <label class="radio-item">
+              <input type="radio" name="recruit_type" value="社招" checked /> 社招
+            </label>
+            <label class="radio-item">
+              <input type="radio" name="recruit_type" value="校招" /> 校招
+            </label>
+          </div>
         </div>
 
         <!-- 订阅邮箱 -->
@@ -51,7 +55,6 @@
           <label for="publish-within">岗位发布时长 <span class="req">*</span></label>
           <select id="publish-within" name="publish_within">
             <option value="最近1周">最近 1 周</option>
-            <option value="最近2周">最近 2 周</option>
             <option value="最近1个月" selected>最近 1 个月</option>
             <option value="最近3个月">最近 3 个月</option>
             <option value="不限">不限</option>

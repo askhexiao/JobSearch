@@ -66,6 +66,10 @@ select {
 }
 input:focus, select:focus { border-color: var(--accent); }
 
+.radio-group { display: flex; gap: 28px; }
+.radio-item { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 400; cursor: pointer; }
+.radio-item input { width: 16px; height: 16px; accent-color: var(--brand); cursor: pointer; }
+
 select {
   appearance: none;
   -webkit-appearance: none;

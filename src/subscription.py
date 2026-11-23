@@ -31,7 +31,6 @@ DEFAULT_EMPLOYER_DB = "UniFit100 优质雇主数据库 - 2027"
 # 岗位发布时长：选项 -> 天数（None 表示不限）。
 PUBLISH_WITHIN_OPTIONS = {
     "最近1周": 7,
-    "最近2周": 14,
     "最近1个月": 30,
     "最近3个月": 90,
     "不限": None,
