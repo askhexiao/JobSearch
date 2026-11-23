@@ -82,12 +82,18 @@ def render_email(sub, jobs, web_base_url: str) -> str:
         "——",
     ]
     for idx, j in enumerate(jobs[:MAX_JOBS_PER_EMAIL], 1):
-        title = f"{j.title}（英文）" if j.language == "英文" else j.title
+        title = j.title
         if j.publish_date and j.publish_date >= (date.today() - timedelta(days=RECENT_DAYS)).isoformat():
-            title = f"{title}【新】"
+            title = f"{title} [新]"
         lines.append(f"{idx}. {title}")
-        lines.append(f"   {j.company} | {j.location} | {j.salary or '薪资面议'} | {j.publish_date}")
-        lines.append(f"   投递 → {j.job_url}")
+
+        meta = f"{j.company} | {j.location} | {j.salary or '薪资面议'}"
+        if j.language == "英文":
+            meta += " | 英文招聘"
+        meta += f" | {j.publish_date}"
+        lines.append(meta)
+
+        lines.append(f"投递 → {j.job_url}")
         lines.append("")
     if len(jobs) > MAX_JOBS_PER_EMAIL:
         lines.append(f"（仅展示前 {MAX_JOBS_PER_EMAIL} 个，共 {len(jobs)} 个）")
