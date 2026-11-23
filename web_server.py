@@ -73,11 +73,11 @@ class Handler(BaseHTTPRequestHandler):
         self._send(200, html.encode("utf-8"), "text/html; charset=utf-8")
 
     # ---------- 响应工具 ----------
-    def _send(self, status: int, body: bytes, ctype: str) -> None:
+    def _send(self, status: int, body: bytes, ctype: str, cache: str = "no-store") -> None:
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Cache-Control", "no-store")
+        self.send_header("Cache-Control", cache)
         self.end_headers()
         self.wfile.write(body)
 
@@ -90,7 +90,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": "not found"}, 404)
             return
         ctype = _MIME.get(path.suffix.lower(), "application/octet-stream")
-        self._send(200, path.read_bytes(), ctype)
+        # 静态资源可缓存（CSS/JS/字体/图片），避免每次刷新重下 3.69MB 字体
+        self._send(200, path.read_bytes(), ctype, cache="public, max-age=86400")
 
     def _handle_get_subscription(self) -> None:
         query = parse_qs(urlparse(self.path).query)
