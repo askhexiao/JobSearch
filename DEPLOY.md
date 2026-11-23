@@ -8,10 +8,10 @@
 用户浏览器
    │  HTTPS
    ▼
-Nginx（80/443，jobs.unifit100.com）
-   │  反向代理
+Nginx（80/443，unifit100.com/jobs）
+   │  反向代理（保留 /jobs 前缀）
    ▼
-web_server.py（127.0.0.1:8000，systemd 守护）
+web_server.py（127.0.0.1:8000，--base-path /jobs，systemd 守护）
    │
    ├─ web/ 静态页面（订阅页 + 管理页）
    ├─ unifit100.db（SQLite）
@@ -45,8 +45,8 @@ web_server.py（127.0.0.1:8000，systemd 守护）
 
 ## 二、域名与备案
 
-1. 建议用**子域名**部署订阅页，例如 `jobs.unifit100.com`（子域名不需要额外备案）。
-2. 在 DNS 控制台添加 **A 记录**：`jobs` → 服务器公网 IP。
+1. 用**子路径**部署：`unifit100.com/jobs`（同域名，无需额外备案，也无需新增 DNS 解析）。
+2. `unifit100.com` 已上线，只需在**现有 Nginx** 里新增一个 `/jobs/` location。
 
 ## 三、上传代码
 
@@ -81,7 +81,7 @@ vim config.json
   "smtp_user": "jobs@notify.unifit100.com",
   "smtp_password": "你的SMTP密码",
   "sender": "jobs@notify.unifit100.com",
-  "web_base_url": "https://jobs.unifit100.com"
+  "web_base_url": "https://unifit100.com/jobs"
 }
 ```
 
@@ -98,7 +98,7 @@ After=network.target
 
 [Service]
 WorkingDirectory=/opt/unifit100/JobSearch
-ExecStart=/usr/bin/python3 web_server.py --host 127.0.0.1 --port 8000
+ExecStart=/usr/bin/python3 web_server.py --host 127.0.0.1 --port 8000 --base-path /jobs
 Restart=always
 RestartSec=3
 
@@ -116,46 +116,26 @@ systemctl status unifit100   # 看到 active (running) 即成功
 
 ## 六、Nginx 反向代理 + HTTPS
 
-安装 Nginx：
-
-```bash
-apt update && apt install -y nginx
-```
-
-创建 `/etc/nginx/sites-available/jobs.unifit100.com`：
+`unifit100.com` 已有 Nginx 配置（咨询页），只需在其 `server` 块内**新增**一个 location：
 
 ```nginx
-server {
-    listen 80;
-    server_name jobs.unifit100.com;
-    return 301 https://$host$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name jobs.unifit100.com;
-
-    ssl_certificate     /etc/nginx/ssl/jobs.unifit100.com.pem;
-    ssl_certificate_key /etc/nginx/ssl/jobs.unifit100.com.key;
-
-    location / {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
+# 加入 unifit100.com 的现有 server 块内（listen 443 ssl 的那个）
+location /jobs/ {
+    proxy_pass http://127.0.0.1:8000;   # 无尾斜杠，保留 /jobs 前缀
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
 }
 ```
 
-启用并重载：
+重载：
 
 ```bash
-ln -s /etc/nginx/sites-available/jobs.unifit100.com /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
-> **HTTPS 证书**：在阿里云控制台申请免费 SSL 证书（一年期），下载 Nginx 版，把 `.pem` / `.key` 放到上面配置的路径。或用 `certbot`（Let's Encrypt）自动签发。
+> 若 `unifit100.com` 的 HTTPS 证书已就绪，`/jobs` 自动复用同一证书，无需再签。若无 HTTPS，先在阿里云申请免费 SSL 证书配到现有 server 块。
 
 ## 七、定时任务（cron）
 
@@ -187,10 +167,10 @@ nohup python3 run_scrape.py > /tmp/scrape.log 2>&1 &
 
 ## 九、验证
 
-1. 浏览器访问 `https://jobs.unifit100.com/` → 应显示订阅页。
+1. 浏览器访问 `https://unifit100.com/jobs/` → 应显示订阅页。
 2. 提交订阅 → 应立即收到一封邮件（即时首封推送）。
 3. 点邮件底部「管理订阅」→ 能打开管理页、能修改、能退订。
-4. `https://jobs.unifit100.com/manage?email=xxx` 直接进入管理页。
+4. `https://unifit100.com/jobs/manage?email=xxx` 直接进入管理页。
 
 ## 注意事项
 
