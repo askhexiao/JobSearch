@@ -25,15 +25,25 @@ def _city_label(loc: str) -> str:
 
 
 def _sub_summary(sub) -> str:
-    """订阅摘要：职位 · 招聘类型 · 地点 · 发布时长。"""
+    """订阅条件：职位名称 | 招聘类型 | 工作地点 | 发布时长。"""
     parts = [("、".join(sub.titles)) if sub.titles else "不限职位"]
     parts.append(sub.recruit_type)
     if sub.location_unlimited:
         parts.append("不限地点")
     elif sub.locations:
         parts.append("、".join(_city_label(l) for l in sub.locations))
+    else:
+        parts.append("不限地点")
     parts.append(sub.publish_within)
-    return " · ".join(parts)
+    return " | ".join(parts)
+
+
+def _frequency_label(sub) -> str:
+    if sub.frequency == "每天1次":
+        return "每天 1 次 (10:00 定时推送)"
+    if sub.frequency == "每周1次":
+        return "每周 1 次 (周三 10:00 定时推送)"
+    return sub.frequency
 
 
 def render_email(sub, jobs, web_base_url: str) -> str:
@@ -44,9 +54,10 @@ def render_email(sub, jobs, web_base_url: str) -> str:
     lines = [
         "UniFit100 | Job Search",
         "",
-        f"Hi，你订阅的职位有新岗位（共 {len(jobs)} 个）：",
+        f"符合您订阅条件的职位共有 {len(jobs)} 个：",
         "",
-        f"【订阅】{summary}",
+        f"[订阅条件] {summary}",
+        f"[推送频率] {_frequency_label(sub)}",
         "",
         "——",
     ]
