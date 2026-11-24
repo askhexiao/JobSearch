@@ -25,3 +25,4 @@ config.json
 *.swp
 .sub_warn_sent
 run_report.py
+internal/
