@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import smtplib
 import ssl
+from email import encoders
 from email.header import Header
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formataddr
 
@@ -39,6 +42,39 @@ class Mailer:
         msg["Subject"] = Header(subject, "utf-8")
         msg["From"] = formataddr((str(Header(self.from_name, "utf-8")), self.from_addr))
         msg["To"] = to
+
+        context = ssl.create_default_context()
+        if self.use_ssl:
+            server = smtplib.SMTP_SSL(self.host, self.port, context=context, timeout=30)
+        else:
+            server = smtplib.SMTP(self.host, self.port, timeout=30)
+            server.starttls(context=context)
+        try:
+            server.login(self.username, self.password)
+            server.sendmail(self.from_addr, [to], msg.as_string())
+        finally:
+            try:
+                server.quit()
+            except Exception:
+                pass
+
+    def send_attachment(self, to: str, subject: str, html_body: str, filename: str, data: bytes, mime_type: str) -> None:
+        """发送带附件的邮件（HTML 正文 + 一个附件）。"""
+        if not self.configured:
+            raise RuntimeError("SMTP 未配置（缺少 username/password）")
+
+        msg = MIMEMultipart()
+        msg["Subject"] = Header(subject, "utf-8")
+        msg["From"] = formataddr((str(Header(self.from_name, "utf-8")), self.from_addr))
+        msg["To"] = to
+
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        part = MIMEBase(*mime_type.split("/", 1))
+        part.set_payload(data)
+        encoders.encode_base64(part)
+        part.add_header("Content-Disposition", "attachment", filename=("utf-8", "", filename))
+        msg.attach(part)
 
         context = ssl.create_default_context()
         if self.use_ssl:
