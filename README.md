@@ -1,7 +1,6 @@
-# UniFit100 | Job Search — 免费职位订阅工具
+# Job Search by UniFit100 · 免费职位订阅工具
 
-> 面向**所有求职者**的免费职位订阅推送工具。
-> 订阅你关心的**职位名称 + 工作地点**，定时抓取企业公开职位，邮件推送到你的邮箱。
+> 面向**所有求职者**的免费职位订阅推送工具。订阅你关心的**职位名称 + 工作地点**，定时抓取企业公开职位，邮件推送到你的邮箱。
 > **免费、开源、只推公开职位、只覆盖中国大陆。**
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
@@ -9,13 +8,15 @@
 [![零依赖](https://img.shields.io/badge/dependencies-0-green)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
+> **English** — A free, open-source job-subscription tool for **mainland China**. Subscribe by job title + location, and get new openings delivered to your inbox. Zero third-party dependencies (Python 3.9+). Live demo: <https://unifit100.com/jobs> · Resume & interview coaching: <https://unifit100.com/consultant>
+
 ---
 
 ## ✨ 它能做什么
 
-- 🔎 **按职位 + 地点订阅**：职位名称最多 3 个、工作地点最多 4 个（或选「不限」）。
-- 📬 **邮件推送**：定时抓取，**新岗位**自动推到你邮箱（阿里云 DirectMail）。
-- 🖥 **网页订阅页**：填表即订阅，无需命令行。
+- 🔎 **按职位 + 地点订阅**：职位名称最多 5 个、工作地点最多 5 个（或选「不限」）。
+- 📬 **邮件推送**：订阅后即时推送首封，之后按「每天 1 次 / 每周 1 次」定时推送**新岗位**。
+- 🖥 **网页订阅页**：填表即订阅，支持**管理订阅**（改配置 / 退订），无需命令行。
 - 🏢 **只推公开职位**：数据来自企业/官方公开渠道，投递时引导你回原官网。
 - 🇨🇳 **只覆盖中国大陆**：自动排除港澳台岗位。
 - 🆓 **免费 + 开源 + 零第三方依赖**：仅需 Python 3.9+。
@@ -24,9 +25,9 @@
 
 | 类型 | 来源 | 状态 |
 |---|---|---|
-| 官方源（主力） | 24365 国家大学生就业服务平台（ncss.cn） | ✅ 已跑通 |
+| 官方源（主力） | 24365 国家大学生就业服务平台（ncss.cn） | ✅ 已跑通（城市级） |
 | 央企/国企 | 国聘网（iguopin.com） | ✅ 已跑通 |
-| 外企补充 | Greenhouse ATS（Duolingo / Airbnb / Databricks / MongoDB / Flexport / Riot Games） | ✅ 已跑通 |
+| 外企补充 | Greenhouse ATS（Duolingo / Airbnb / Databricks / MongoDB / Flexport / Riot Games / GoDaddy） | ✅ 已跑通 |
 | 官方源（待接） | 各省市高校就业网 | 🚧 待接 |
 | 企业官网（待补） | 字节 / 腾讯 / 阿里 / 微软 / 华为等头部雇主官网 | 🚧 待补 |
 | 商业平台 | 智联 / BOSS / 应届生（有反爬 + 合规灰色） | ❌ 不碰 |
@@ -43,7 +44,7 @@
 
 抓取遵循礼貌原则：请求限频、真实 User-Agent、失败重试与退避。
 
-**完整合规说明（robots.txt 现状、个人信息处理、退订、内容版权、风险提示、免责声明）见 [COMPLIANCE.md](COMPLIANCE.md)。**
+**完整合规说明（robots.txt 现状、个人信息处理、退订、内容版权、风险提示、免责声明、侵权下架机制）见 [COMPLIANCE.md](COMPLIANCE.md)。**
 
 > 🔒 本项目唯一收集的个人信息是**订阅邮箱**，仅用于职位推送；用户可**随时退订**，退订后立即停止推送。不抓取、不存储任何简历 / 姓名 / 电话等个人信息。
 
@@ -54,16 +55,12 @@
 零第三方依赖，仅需 **Python 3.9+**：
 
 ```bash
-git clone https://github.com/<your-username>/unifit100.git
-cd unifit100
+git clone https://github.com/<your-username>/JobSearch.git
+cd JobSearch
 
-# ① 抓取职位并入库（可单独运行，或一键全量）
-python run_scrape.py               # 一键全量抓取：24365(全省)+国聘+外企
-python run_ncss.py                 # 24365 北京地区职位
-python run_ncss.py 设计            # 指定关键词
-python run_ncss.py 设计 --area 上海
-python run_greenhouse.py           # 外企中国大陆岗位
-python run_iguopin.py              # 国聘网央企/国企岗位
+# ① 抓取职位并入库
+python run_scrape.py               # 全量抓取：24365(城市级+关键词) + 国聘 + 外企
+python run_scrape.py --light       # 轻量抓取：24365 城市级 + 国聘 + 外企（适合每日定时）
 
 # ② 启动网页订阅页
 python web_server.py               # 打开 http://127.0.0.1:8000 填表订阅
@@ -73,24 +70,24 @@ python web_server.py               # 打开 http://127.0.0.1:8000 填表订阅
 
 ### 工作流
 
-1. 用户在订阅页填写：**邮箱 + 职位名称（≤5）+ 招聘类型 + 工作地点（省-市，≤5，或「不限」）+ 推送频率 + 职位发布时长**。
-2. 定时「抓取入库 → 读库匹配 → 去重推送」，**只发新岗位**：
+1. 用户在订阅页填写：**邮箱 + 职位名称（≤5）+ 招聘类型（校招/社招）+ 工作地点（省-市，≤5，或「不限」）+ 推送频率（每天/每周）+ 职位发布时长（1周/1个月/3个月/6个月）**。
+2. 订阅后**即时推送首封**；之后定时「抓取入库 → 读库匹配 → 去重推送」，**只发新岗位**：
 
 ```bash
-python run_scrape.py               # ① 全量抓取入库（24365+国聘+外企）
+python run_scrape.py               # ① 抓取入库
 python run_push.py --dry-run       # ② 预览推送（读库匹配）
 cp config.example.json config.json # 填 SMTP 凭证
 python run_push.py                 # ③ 真实发送
 ```
 
-建议用 `cron` / GitHub Actions 定时执行。**推送时间**：每天 10:00 推「每天1次」订阅，每周三 10:00 推「每周1次」订阅，用 `--frequency` 过滤：
+**推送时间**：每天 10:00 推「每天1次」订阅，每周三 10:00 推「每周1次」订阅，用 `--frequency` 过滤：
 
 ```bash
 # 每天 10:00 推送「每天1次」订阅
-0 10 * * * cd /path/to/unifit100 && python3 run_push.py --frequency 每天1次
+0 10 * * * cd /path/to/JobSearch && python3 run_push.py --frequency 每天1次
 
 # 每周三 10:00 推送「每周1次」订阅
-0 10 * * 3 cd /path/to/unifit100 && python3 run_push.py --frequency 每周1次
+0 10 * * 3 cd /path/to/JobSearch && python3 run_push.py --frequency 每周1次
 ```
 
 ### 阿里云 DirectMail 配置
@@ -102,6 +99,7 @@ python run_push.py                 # ③ 真实发送
 
 ```json
 {
+  "web_base_url": "https://你的域名/jobs",
   "smtp": {
     "host": "smtpdm.aliyun.com",
     "port": 465,
@@ -114,40 +112,47 @@ python run_push.py                 # ③ 真实发送
 }
 ```
 
-> 当前邮件为**纯文本**；HTML 品牌模板（套用 `brand/` 的 logo 与字体）在 Roadmap 中。
+> 邮件为 **HTML 格式**：含「管理订阅」链接、英文岗位标注「英文招聘」、近期岗位标 `[新]`，按发布日期倒序。
+
+### 部署到阿里云
+
+完整部署指南（Nginx 子路径反代 + systemd + cron + HTTPS）见 [DEPLOY.md](DEPLOY.md)。
 
 ## 📁 目录结构
 
 ```
-unifit100/
+JobSearch/
 ├── src/
 │   ├── models.py              # 统一 Job 数据模型
 │   ├── db.py                  # SQLite 职位存储（unique(source,job_id) upsert）
 │   ├── locations.py           # 省份码 + 城市中英文映射 + 地点匹配
-│   ├── normalize.py           # 字段归一化（学历/公司性质/招聘类型）
-│   ├── subscription.py        # 订阅模型 + 存储 + 匹配 + 校验
+│   ├── normalize.py           # 字段归一化 + 中英职位词典 + 语言检测
+│   ├── subscription.py        # 订阅模型 + 存储 + 匹配 + 校验 + 软退订
 │   ├── mailer.py              # SMTP 邮件（阿里云 DirectMail）
+│   ├── pusher.py              # 匹配 + 去重 + 渲染邮件 + 推送
 │   └── adapters/
 │       ├── base.py            # 适配器基类（限频 + 礼貌抓取 + 重试）
-│       ├── ncss_24365.py      # 24365 官方平台适配器
+│       ├── ncss_24365.py      # 24365 官方平台适配器（城市级）
 │       ├── greenhouse.py      # Greenhouse 外企适配器（筛中国大陆）
 │       └── iguopin.py         # 国聘网适配器（央企/国企）
 ├── web/
-│   ├── index.html             # 订阅页
-│   ├── style.css              # 样式
+│   ├── index.html             # 订阅页 + 管理订阅页
+│   ├── style.css              # 样式（含 FrankSong 子集字体）
 │   ├── app.js                 # 表单交互 + 校验
-│   └── pca.json               # 省-市行政区划数据
+│   ├── pca.json               # 省-市行政区划数据
+│   └── fangsong.woff2         # 方正新报宋（子集化，106KB）
 ├── brand/
 │   ├── logo.png               # 品牌主 Logo
 │   └── logo_app.png           # App 图标
+├── run_scrape.py              # 入口：全量/轻量抓取三源
 ├── run_ncss.py                # 入口：抓取 24365
-├── run_scrape.py              # 入口：一键全量抓取三源
 ├── run_greenhouse.py          # 入口：抓取 Greenhouse
 ├── run_iguopin.py             # 入口：抓取国聘网
 ├── run_push.py                # 入口：匹配订阅 + 邮件推送
-├── web_server.py              # 入口：订阅页 HTTP 服务
+├── web_server.py              # 入口：订阅页 HTTP 服务（支持子路径部署）
 ├── config.example.json        # SMTP 配置模板
-├── prototype.png              # 前端订阅页原型图（参考）
+├── COMPLIANCE.md              # 合规说明与免责声明
+├── DEPLOY.md                  # 阿里云部署指南
 ├── LICENSE                    # MIT
 └── unifit100.db               # 本地 SQLite（运行后生成，已 gitignore）
 ```
@@ -162,41 +167,37 @@ unifit100/
 | `title` / `company` / `location` | 职位 / 公司 / 工作地点（展示） |
 | `salary` / `salary_min` / `salary_max` | 薪资展示 / 元/月区间（0=面议） |
 | `location_province` / `location_city` / `location_city_en` | 省 / 市 / 英文市（标准化） |
-| `education` / `education_level` | 学历展示 / 枚举（专科/本科/硕士/博士） |
+| `education` / `education_level` | 学历展示 / 枚举 |
 | `recruit_type` / `job_type` | 校招·社招·实习 / 实习·全职 |
 | `company_nature` / `company_size` / `industry` | 国企·民企·外企·事业单位 / 规模 / 行业 |
 | `publish_date` / `job_url` | 发布日期 / 回原官网投递链接 |
+| `language` | 岗位语言（中文 / 英文） |
 | `description` | 职位描述（纯文本） |
-
-## ⚠️ 已知限制
-
-- **24365 地点粒度**：除直辖市外，官方接口仅返回**省级**地点（如「广东」），暂无法细分到「深圳」。城市级抓取在 Roadmap 中。
-- **职位名中英文不互通**：中文关键词（如「数据分析」）能命中 24365 中文职位，但匹配不到外企英文标题（如 "Data Analyst"）。中英职位词典在 Roadmap 中。
 
 ## 📈 当前进度
 
-- [x] 24365 适配器（全国 31 省全量分块抓取，2584 条）
-- [x] Greenhouse 适配器（6 个外企 board，105 条中国大陆岗位）
-- [x] 国聘网适配器（200 条，央企/国企 71.5%，城市级地点 + 校招/社招）
+- [x] 24365 适配器（全国 31 省 + 城市级，3631 条）
+- [x] Greenhouse 适配器（7 个外企 board，106 条中国大陆岗位）
+- [x] 国聘网适配器（201 条，央企/国企，城市级地点）
 - [x] 统一数据模型 + 字段标准化（薪资/地点/学历/招聘类型/公司性质）
 - [x] SQLite 去重（同源 unique + 跨源 title+company+city）
 - [x] 订阅模型（职位 ≤5、地点 ≤5 / 不限、招聘类型、推送频率、发布时长）
-- [x] 前端订阅页（省-市联动 + 校验 + 品牌样式）
-- [x] 邮件推送（阿里云 DirectMail SMTP，纯文本，含 --dry-run）
+- [x] 前端订阅页 + 管理订阅页（省-市联动 + 校验 + 品牌样式 + 软退订）
+- [x] HTML 邮件推送（管理订阅链接 + 英文标签 + 新岗位置顶）
 - [x] 中国大陆过滤（排除港澳台）
-- [x] 推送读库匹配（三源全量岗位真正用于推送）
-- [ ] HTML 邮件模板（套用品牌 logo 与字体）
-- [ ] 中英职位名词典（打通中外职位匹配）
+- [x] 城市级抓取（24365 细分到城市维度）
+- [x] 中英职位词典（打通中文职位名 ↔ 外企英文标题）
+- [x] 订阅即时首封推送 + 定时推送（cron）
+- [x] 成本控制（500 预警 / 1000 暂停订阅）
+- [x] 子路径部署（`--base-path`，如 `/jobs`）
 - [ ] 各省高校就业网适配器
-- [ ] GitHub Actions 定时任务
+- [ ] GitHub Actions 定时任务（当前用 cron，可选迁移）
 
 ## 🗺 Roadmap
 
-1. **HTML 邮件模板**：套用 `brand/` 的 logo + 字体，做品牌化邮件。
-2. **城市级抓取**：24365 细化到城市维度，全量分块抓取。
-3. **中英职位词典**：打通中文职位名 ↔ 外企英文职位标题。
-4. **更多数据源**：各省高校就业网、头部雇主官网。
-5. **GitHub Actions**：云端定时抓取 + 推送，不依赖个人电脑。
+1. **更多数据源**：各省高校就业网、头部雇主官网。
+2. **GitHub Actions**：云端定时抓取 + 推送，不依赖个人服务器（当前用阿里云 cron）。
+3. **中英职位词典扩充**：覆盖更多外企英文职位标题。
 
 ## 💬 求职咨询
 
