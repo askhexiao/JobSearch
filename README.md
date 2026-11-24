@@ -55,7 +55,7 @@
 零第三方依赖，仅需 **Python 3.9+**：
 
 ```bash
-git clone https://github.com/<your-username>/JobSearch.git
+git clone https://github.com/askhexiao/JobSearch.git
 cd JobSearch
 
 # ① 抓取职位并入库

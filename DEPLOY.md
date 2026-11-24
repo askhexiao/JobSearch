@@ -60,7 +60,7 @@ scp -r JobSearch/ root@<服务器IP>:/opt/unifit100/
 ```bash
 # 服务器执行
 cd /opt
-git clone https://github.com/<你的用户名>/JobSearch.git unifit100
+git clone https://github.com/askhexiao/JobSearch.git unifit100
 ```
 
 ## 四、配置
