@@ -8,7 +8,7 @@
 [![零依赖](https://img.shields.io/badge/dependencies-0-green)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)]()
 
-> **English** — A free, open-source job-subscription tool for **mainland China**. Subscribe by job title + location, and get new openings delivered to your inbox. Zero third-party dependencies (Python 3.9+). Live demo: <https://unifit100.com/jobs> · Resume & interview coaching: <https://unifit100.com/consultant>
+> **English** — A free, open-source job-subscription tool for **mainland China**. Subscribe by job title + location, and get new openings delivered to your inbox. Zero third-party dependencies (Python 3.9+). Live demo: <https://unifit100.com/jobs> · Resume & interview coaching: <https://unifit100.com/consultant> · Contributors welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -25,11 +25,10 @@
 
 | 类型 | 来源 | 状态 |
 |---|---|---|
-| 官方源（主力） | 24365 国家大学生就业服务平台（ncss.cn） | ✅ 已跑通（城市级） |
-| 央企/国企 | 国聘网（iguopin.com） | ✅ 已跑通 |
-| 外企补充 | Greenhouse ATS（Duolingo / Airbnb / Databricks / MongoDB / Flexport / Riot Games / GoDaddy） | ✅ 已跑通 |
-| 官方源（待接） | 各省市高校就业网 | 🚧 待接 |
-| 企业官网（待补） | 字节 / 腾讯 / 阿里 / 微软 / 华为等头部雇主官网 | 🚧 待补 |
+| 官方源（样例） | 24365 国家大学生就业服务平台（ncss.cn） | ✅ 已跑通（城市级） |
+| 央企/国企（样例） | 国聘网（iguopin.com） | ✅ 已跑通 |
+| 外企（样例） | Greenhouse ATS（Duolingo / Airbnb / Databricks / MongoDB / Flexport / Riot Games / GoDaddy） | ✅ 已跑通 |
+| 更多源（共创） | 外企 ATS、国内大厂公开接口、政府/高校就业平台 | 🎯 认领见 [Issues](https://github.com/askhexiao/JobSearch-CN/issues) |
 | 商业平台 | 智联 / BOSS / 应届生（有反爬 + 合规灰色） | ❌ 不碰 |
 
 ## ⚖️ 合规声明
@@ -55,7 +54,7 @@
 零第三方依赖，仅需 **Python 3.9+**：
 
 ```bash
-git clone https://github.com/askhexiao/JobSearch.git
+git clone https://github.com/askhexiao/JobSearch-CN.git
 cd JobSearch
 
 # ① 抓取职位并入库
@@ -189,12 +188,13 @@ JobSearch/
 - [x] 中英职位词典（打通中文职位名 ↔ 外企英文标题）
 - [x] 订阅即时首封推送 + 定时推送（cron）
 - [x] 子路径部署（`--base-path`，如 `/jobs`）
-- [ ] 各省高校就业网适配器
+- [x] 开源共创启动（CONTRIBUTING.md + 职位源申请模板 + 认领 issue）
+- [ ] 更多数据源（通过共创认领，见 [Issues](https://github.com/askhexiao/JobSearch-CN/issues)）
 - [ ] GitHub Actions 定时任务（当前用 cron，可选迁移）
 
 ## 🗺 Roadmap
 
-1. **更多数据源**：各省高校就业网、头部雇主官网。
+1. **更多数据源（开源共创）**：通过 [CONTRIBUTING.md](CONTRIBUTING.md) 的认领流程，扩展外企 ATS、国内大厂公开接口、政府/高校就业平台。见 [Issues](https://github.com/askhexiao/JobSearch-CN/issues)。
 2. **GitHub Actions**：云端定时抓取 + 推送，不依赖个人服务器（当前用阿里云 cron）。
 3. **中英职位词典扩充**：覆盖更多外企英文职位标题。
 
@@ -208,9 +208,15 @@ JobSearch/
 
 如果你觉得这个工具有用，请点个 ⭐ Star，让更多求职者看到 🙏
 
-## 🤝 贡献
+## 🤝 开源共创
 
-欢迎提交 PR 补充数据源适配器（继承 `src/adapters/base.py`）或修复失效接口。请遵守上方合规红线。
+想新增一个职位数据源？欢迎认领！
+
+- 📖 **先读 [CONTRIBUTING.md](CONTRIBUTING.md)**：三条合规红线 + 适配器模板 + 自测命令 + PR 审查清单。
+- 🎯 **认领任务**：在 [Issues](https://github.com/askhexiao/JobSearch-CN/issues) 找 `good first issue` 标签的「新职位源」，或按模板提一个「新职位源申请」。
+- 🔴 **红线**：只接**公开接口**（免登录 / 免签名 / 免验证码 / 免加密）；凡需要签名、登录、验证码的接口一律拒绝，不提交绕过方案。
+
+提交 PR 前请本地自测通过，并在 PR 描述里附上审查清单（见 CONTRIBUTING.md）。
 
 ## 📄 License
 
