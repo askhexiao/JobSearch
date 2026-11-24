@@ -28,6 +28,12 @@ BRAND_DIR = ROOT / "brand"
 DB_PATH = ROOT / "unifit100.db"
 CONFIG_PATH = ROOT / "config.json"
 
+# 成本控制：活跃订阅数阈值
+SUB_WARN = 500                   # 达到此数量发预警邮件
+SUB_LIMIT = 1000                 # 达到此数量暂停订阅
+ADMIN_EMAIL = "unifit100@qq.com"
+WARN_FLAG = ROOT / ".sub_warn_sent"
+
 _MIME = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
@@ -49,6 +55,23 @@ def _load_config() -> dict | None:
             return json.load(f)
     except (json.JSONDecodeError, OSError):
         return None
+
+
+def _warn_cost(count: int) -> None:
+    """活跃订阅数达到预警阈值时，给管理员发预警邮件（只发一次）。"""
+    try:
+        config = _load_config()
+        mailer = Mailer(config)
+        if mailer.configured:
+            body = (
+                "<html><body>"
+                f"UniFit100 订阅预警：当前活跃订阅数已达 {count}，请留意邮件发送成本。"
+                "</body></html>"
+            )
+            mailer.send(ADMIN_EMAIL, "UniFit100 订阅预警", body)
+            WARN_FLAG.touch()
+    except Exception as exc:
+        sys.stderr.write(f"[web] 成本预警邮件发送失败：{exc}\n")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -206,6 +229,17 @@ class Handler(BaseHTTPRequestHandler):
             store.close()
             self._send_json({"ok": True, "message": "检测到您的邮箱已订阅，无需重复操作哦"})
             return
+
+        # 成本控制：仅对「新增活跃订阅」检查数量（更新已有订阅不增加数量）
+        is_new_active = existing is None or bool(existing.unsubscribed_at)
+        if is_new_active:
+            active_count = store.count_active()
+            if active_count >= SUB_LIMIT:
+                store.close()
+                self._send_json({"ok": False, "error": "订阅人数已达上限，服务暂时暂停，请稍后再试"}, 429)
+                return
+            if active_count >= SUB_WARN and not WARN_FLAG.exists():
+                _warn_cost(active_count)
 
         store.upsert(sub)
 
