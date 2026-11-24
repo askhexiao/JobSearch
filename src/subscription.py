@@ -245,13 +245,6 @@ class SubscriptionStore:
         ).fetchall()
         return [self._row_to_sub(r) for r in rows]
 
-    def count_active(self) -> int:
-        """活跃订阅数（未退订）。"""
-        row = self.conn.execute(
-            "SELECT COUNT(*) FROM subscriptions WHERE unsubscribed_at = ''"
-        ).fetchone()
-        return row[0] if row else 0
-
     def unsubscribe(self, email: str) -> bool:
         """软退订：标记退订时间，保留订阅与已发送记录。返回是否原本活跃。"""
         now = datetime.now(timezone.utc).isoformat()

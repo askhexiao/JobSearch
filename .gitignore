@@ -24,3 +24,4 @@ config.json
 .vscode/
 *.swp
 .sub_warn_sent
+run_report.py
